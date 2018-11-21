@@ -1,0 +1,763 @@
+=======================================================================
+
+   sid - student ID
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   sch_g7_code - school of record for grade 7
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   year - year of grade 7
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  2001.000
+       1st Qu.:  2004.000
+        Median:  2005.000
+          Mean:  2005.353
+       3rd Qu.:  2006.000
+          Max.:  2011.000
+
+=======================================================================
+
+   grade - grade level
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   scale_score_7_math - scaled state assessment score, from 0-120
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   -42.261
+       1st Qu.:    32.727
+        Median:    38.498
+          Mean:    39.089
+       3rd Qu.:    44.710
+          Max.:   110.512
+          NA's:  1237.000
+
+=======================================================================
+
+   scale_score_7_read - scaled state assessment score, from 0-120 (reading)
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  -108.635
+       1st Qu.:    30.554
+        Median:    39.858
+          Mean:    40.946
+       3rd Qu.:    49.989
+          Max.:   192.643
+          NA's:  1190.000
+
+=======================================================================
+
+   age - student's age in years
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   9.000
+       1st Qu.:  12.000
+        Median:  12.000
+          Mean:  12.070
+       3rd Qu.:  12.000
+          Max.:  17.000
+
+=======================================================================
+
+   frpl_7 - student FRPL status (0 = none, 1 = reduced, 2= free, 9 = other)
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.671
+       3rd Qu.:  1.000
+          Max.:  9.000
+
+=======================================================================
+
+   ell_7 - was student an English Language Learner in grade 7?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.077
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   iep_7 - was student on an Individual Education Plan in grade 7?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.204
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   gifted_7 - was student in a gifted and talented program in grade 7?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.118
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   cohort_year - what was the student's 9th grade cohort year?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  2003.000
+       1st Qu.:  2006.000
+        Median:  2007.000
+          Mean:  2007.353
+       3rd Qu.:  2008.000
+          Max.:  2013.000
+
+=======================================================================
+
+   cohort_grad_year - what was the ontime-graduation year for the student's 9th grade cohort?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  2006.000
+       1st Qu.:  2009.000
+        Median:  2010.000
+          Mean:  2010.353
+       3rd Qu.:  2011.000
+          Max.:  2016.000
+
+=======================================================================
+
+   pct_days_absent_7 - what percentage of days was the student absent in grade 7?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:    0.000
+       1st Qu.:    0.000
+        Median:    0.000
+          Mean:    3.505
+       3rd Qu.:    5.000
+          Max.:  140.000
+          NA's:  607.000
+
+=======================================================================
+
+   male - was the student male?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:     0.000
+       1st Qu.:     0.000
+        Median:     1.000
+          Mean:     0.513
+       3rd Qu.:     1.000
+          Max.:     1.000
+          NA's:  1210.000
+
+=======================================================================
+
+   race_ethnicity - what was the student's race/ethnicity?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   any_grad - did the student ever graduate?
+
+-----------------------------------------------------------------------
+
+   Storage mode: integer
+
+          Min.:   0.000
+       1st Qu.:   0.000
+        Median:   1.000
+          Mean:   0.670
+       3rd Qu.:   1.000
+          Max.:   1.000
+          NA's:  30.000
+
+=======================================================================
+
+   first_hs_code - what was the ID code for the student's first high school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   disappeared - did the student disappear before known graduation?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.010
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   dropout - is the student confirmed to have dropped out of high school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.206
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   early_grad - did the student graduate earlier than their expected cohort graduation year?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.000
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   late_grad - did the student graduate later than their expected cohort graduation year?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.012
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   ontime_grad - did the student graduate on time with their cohort?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  1.000
+          Mean:  0.655
+       3rd Qu.:  1.000
+          Max.:  1.000
+
+=======================================================================
+
+   still_enrolled - is the student still enrolled as of 2018?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.013
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   transferout - did the student transfer out of the state before graduating?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.000
+          Mean:  0.101
+       3rd Qu.:  0.000
+          Max.:  1.000
+
+=======================================================================
+
+   sch_g7_name - what was the name of the student's grade 7 school of record?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   sch_g7_enroll - what was the enrollment size of the student's grade 7 school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:     1.000
+       1st Qu.:    40.000
+        Median:   166.000
+          Mean:   305.710
+       3rd Qu.:   398.000
+          Max.:  3317.000
+
+=======================================================================
+
+   sch_g7_male_per - what percentage of the student's grade 7 school enrollment was male?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.326
+       1st Qu.:  0.465
+        Median:  0.507
+          Mean:  0.511
+       3rd Qu.:  0.558
+          Max.:  0.749
+
+=======================================================================
+
+   sch_g7_frpl_per - what percentage of the student's grade 7 school was FRPL eligible?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.038
+       1st Qu.:  0.452
+        Median:  0.616
+          Mean:  0.605
+       3rd Qu.:  0.770
+          Max.:  0.997
+
+=======================================================================
+
+   sch_g7_lep_per - what percentage of the student's grade 7 school were limited English proficient?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.000
+        Median:  0.044
+          Mean:  0.080
+       3rd Qu.:  0.135
+          Max.:  0.446
+
+=======================================================================
+
+   sch_g7_gifted_per - what percentage of the student's grade 7 school were in gifted and talented programs?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.000
+       1st Qu.:  0.036
+        Median:  0.146
+          Mean:  0.166
+       3rd Qu.:  0.256
+          Max.:  0.645
+
+=======================================================================
+
+   sch_g7_lea_id - what was the school district/LEA ID for the student's grade 7 school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   sch_g7_poverty_desig - what was the state "poverty designation" for the student's grade 7 school?
+ 
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   first_hs_name - what was the name of the student's first high school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   first_hs_enroll - what was the size of the student's first high school in enrollment?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:     1.000
+       1st Qu.:    40.000
+        Median:   166.000
+          Mean:   307.215
+       3rd Qu.:   398.000
+          Max.:  3317.000
+          NA's:    30.000
+
+=======================================================================
+
+   first_hs_male_per - what percentage of the enrollment at the student's first high school was male?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   0.326
+       1st Qu.:   0.465
+        Median:   0.507
+          Mean:   0.512
+       3rd Qu.:   0.558
+          Max.:   0.749
+          NA's:  30.000
+
+=======================================================================
+
+   first_hs_frpl_per - what percentage of the enrollment at the student's first high school was FRL eligible?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   0.038
+       1st Qu.:   0.452
+        Median:   0.617
+          Mean:   0.605
+       3rd Qu.:   0.771
+          Max.:   0.997
+          NA's:  30.000
+
+=======================================================================
+
+   first_hs_lep_per - what percentage of the enrollment at the student's first high school was limited English proficient?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   0.000
+       1st Qu.:   0.000
+        Median:   0.045
+          Mean:   0.080
+       3rd Qu.:   0.138
+          Max.:   0.446
+          NA's:  30.000
+
+=======================================================================
+
+   first_hs_gifted_per - what percentage of the enrollment at the student's first high school was placed in Gifted and Talented programming?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   0.000
+       1st Qu.:   0.036
+        Median:   0.146
+          Mean:   0.166
+       3rd Qu.:   0.256
+          Max.:   0.645
+          NA's:  30.000
+
+=======================================================================
+
+   first_hs_lea_id - what was the school district / LEA ID for the student's first high school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   first_hs_poverty_desig - what was the state's "poverty designation" for the student's first high school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   vendor_ews_score - what is the student's estimated probability of graduating high school according 
+   to the proprietary artificial intelligence application provided by Vendor Z?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:  0.050
+       1st Qu.:  0.893
+        Median:  0.952
+          Mean:  0.920
+       3rd Qu.:  0.978
+          Max.:  1.000
+
+=======================================================================
+
+   sch_g7_lea_name - what is the name of the LEA/District for the student's grade 7 school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: integer
+   Factor with 45 levels
+
+     Values and labels    N    Percent 
+                                       
+    1 'Anderson'       3487    2.8     
+    2 'Athena'         2248    1.8     
+    3 'Avondale'       2499    2.0     
+    4 'Basswood'       1195    1.0     
+    5 'Beckham'        2491    2.0     
+    6 'Briarfield'     2749    2.2     
+    7 'Carter '        5000    4.0     
+    8 'Chateau'        1197    1.0     
+    9 'Columbia'       2739    2.2     
+   10 'Darwin'         2500    2.0     
+   11 'Donohue'        2499    2.0     
+   12 'Douglass'       1199    1.0     
+   13 'East Valley'    2496    2.0     
+   14 'Eliot'          2746    2.2     
+   15 'Esperanza'      4997    4.0     
+   16 'Falcon'         1200    1.0     
+   17 'Finch'          1198    1.0     
+   18 'Flagstaff'      2249    1.8     
+   19 'Forest Heights' 1195    1.0     
+   20 'Franklin'       1197    1.0     
+   21 'Freedman'       4994    4.0     
+   22 'Gallant'        2742    2.2     
+   23 'Hadley'         4990    4.0     
+   24 'Hawking'        1195    1.0     
+   25 'Henderson'      4999    4.0     
+   26 'King'           1198    1.0     
+   27 'Kinney'         2498    2.0     
+   28 'Kumar'          2499    2.0     
+   29 'Lincoln'        3490    2.8     
+   30 'Lookout Point'  4997    4.0     
+   31 'Madison'        4985    4.0     
+   32 'Quicksilver'    2497    2.0     
+   33 'Rolling Knoll'  2499    2.0     
+   34 'Roosevelt'      1199    1.0     
+   35 'Selwyn'         1200    1.0     
+   36 'Silver Oak'     3496    2.8     
+   37 'Spellman'       4999    4.0     
+   38 'Summit'         2749    2.2     
+   39 'Sunset'         2250    1.8     
+   40 'Sylvan'         4996    4.0     
+   41 'Turcotte'       2498    2.0     
+   42 'Verndale'       2498    2.0     
+   43 'Vision'         2492    2.0     
+   44 'Wilson'         2498    2.0     
+   45 'Woodland'       2249    1.8     
+
+=======================================================================
+
+   first_hs_lea_name - what is the name of the LEA/District for the student's grade 7 school?
+
+-----------------------------------------------------------------------
+
+   Storage mode: integer
+   Factor with 45 levels
+
+     Values and labels    N    Percent 
+                                       
+    1 'Anderson'       3487    2.8  2.8
+    2 'Athena'         2248    1.8  1.8
+    3 'Avondale'       2499    2.0  2.0
+    4 'Basswood'       1195    1.0  1.0
+    5 'Beckham'        2491    2.0  2.0
+    6 'Briarfield'     2749    2.2  2.2
+    7 'Carter '        5000    4.0  4.0
+    8 'Chateau'        1197    1.0  1.0
+    9 'Columbia'       2738    2.2  2.2
+   10 'Darwin'         2500    2.0  2.0
+   11 'Donohue'        2497    2.0  2.0
+   12 'Douglass'       1199    1.0  1.0
+   13 'East Valley'    2496    2.0  2.0
+   14 'Eliot'          2746    2.2  2.2
+   15 'Esperanza'      4995    4.0  4.0
+   16 'Falcon'         1199    1.0  1.0
+   17 'Finch'          1198    1.0  1.0
+   18 'Flagstaff'      2249    1.8  1.8
+   19 'Forest Heights' 1194    1.0  1.0
+   20 'Franklin'       1197    1.0  1.0
+   21 'Freedman'       4994    4.0  4.0
+   22 'Gallant'        2742    2.2  2.2
+   23 'Hadley'         4990    4.0  4.0
+   24 'Hawking'        1195    1.0  1.0
+   25 'Henderson'      4997    4.0  4.0
+   26 'King'           1197    1.0  1.0
+   27 'Kinney'         2498    2.0  2.0
+   28 'Kumar'          2499    2.0  2.0
+   29 'Lincoln'        3485    2.8  2.8
+   30 'Lookout Point'  4996    4.0  4.0
+   31 'Madison'        4985    4.0  4.0
+   32 'Quicksilver'    2497    2.0  2.0
+   33 'Rolling Knoll'  2494    2.0  2.0
+   34 'Roosevelt'      1199    1.0  1.0
+   35 'Selwyn'         1200    1.0  1.0
+   36 'Silver Oak'     3494    2.8  2.8
+   37 'Spellman'       4999    4.0  4.0
+   38 'Summit'         2746    2.2  2.2
+   39 'Sunset'         2250    1.8  1.8
+   40 'Sylvan'         4996    4.0  4.0
+   41 'Turcotte'       2497    2.0  2.0
+   42 'Verndale'       2495    2.0  2.0
+   43 'Vision'         2492    2.0  2.0
+   44 'Wilson'         2498    2.0  2.0
+   45 'Woodland'       2249    1.8  1.8
+   NA                    30         0.0
+
+=======================================================================
+
+   coop_name_g7 - what is the name of the LEA coop the student's grade 7 school belongs to?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   coop_name_first_hs - what is the name of the LEA coop the student's first HS belongs to?
+
+-----------------------------------------------------------------------
+
+   Storage mode: character
+
+       Length:     123788
+        Class:  character
+         Mode:  character
+
+=======================================================================
+
+   year_of_graduation - if the student graduated, what year was it?
+
+-----------------------------------------------------------------------
+
+   Storage mode: double
+
+          Min.:   2006.000
+       1st Qu.:   2009.000
+        Median:   2010.000
+          Mean:   2010.381
+       3rd Qu.:   2011.000
+          Max.:   2015.000
+          NA's:  40812.000
+
