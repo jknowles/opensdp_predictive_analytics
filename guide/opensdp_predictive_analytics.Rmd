@@ -25,11 +25,20 @@ output:
 
 ### Objective
 
-In this guide, you will be able to...**explain objective here**
+After completing this guide, the user will be familiar with the most common 
+principles and technique of predictive analytics and how they can be applied 
+to education data analysis problems - particularly through the example of 
+student "early warning indicators". 
 
 ### Using this Guide
 
-This guide utilizes data from...**explain origin of data here**
+This guide uses synthetic data created by the OpenSDP synthetic data engine.
+The data reflects student-level attainment data and is organized to be similar 
+to the level of detail available at a state education agency - with a single 
+row representing a student-grade-year. This guide does not cover the steps 
+needed to clean raw student data. If you are interested in how to assemble 
+data like this or the procedure used to generate the data, the code used 
+is included in the data subdirectory. 
 
 
 ```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
@@ -48,25 +57,24 @@ options(width=80)
 
 ## Introduction
 
-This guide will provide you with a baseline model to get you started and
-introduce you to the main concepts of predictive analytics. From there, you will
-learn techniques needed to interpret, understand, and iteratively improve the
-model.
-
 For this guide, we will be building a model to predict on-time high school
 graduation using 7th grade data. The problem definition phase is often the
 most important when developing a predictive model, so when applying these
 lessons to your own work consider the outcome to be predicted and the measures
-available carefully. You can learn more about the importance of data preparation
+available. You can learn more about the importance of data preparation
 by reading this guide to EWS development.
 
+This guide will provide you with a baseline model to introduce you to the main
+concepts of predictive analytics. From there, you will learn techniques needed
+to interpret, understand, and iteratively improve the model.
+
 This guide demonstrates the techniques of predictive analytics using a synthetic
-dataset. The data in this guide were generated using the OpenSDP synthetic data
+data set. The data in this guide were generated using the OpenSDP synthetic data
 generator. The code to generate the data is available in the `data` directory.
 The data are completely synthetic student-level records and are free to report
 and distribute - no FERPA concerns here. The one caveat is that the relationships
 between predictors and the outcome in the data may not be typical of the
-relationships you would find in a real-world dataset. In particular, there is
+relationships you would find in your local data set. In particular, there is
 less room for model improvement in this synthetic data than is typical in observed
 education data. But, for learning the ropes, it will suit us just fine!
 
@@ -79,7 +87,8 @@ Here are the steps:
 3. evaluate the predictive power of different variables and select predictors for your model
 4. make predictions using logistic regression
 5. convert the predicted probabilities into a 0/1 indicator
-6. look at the effect of different probability cutoffs on prediction accuracy (develop a "confusion matrix")
+6. look at the effect of different probability cutoffs on prediction accuracy 
+7. Survey advanced techniques for model comparison and model fitting
 
 This guide will take you through these steps using a baseline model for
 predicting graduation using student-level grade 7 records. While this guide
@@ -93,16 +102,16 @@ the outcome. This approach has the advantage of being easy to explain and
 implement, but it might not yield the most accurate predictions. We won't
 demonstrate that approach here, but we will show how to compare the predictive
 power of different modeling approaches so that you can make an informed decision
-about the tradeoffs between transparency and accuracy.
+about the trade offs between transparency and accuracy.
 
-In this guide, we will start from a dataset that has been prepared, but if you
+In this guide, we will start from a data set that has been prepared, but if you
 are applying this to work in your organization, it's good to consider a few
-questions about the prediction task before you start fitting models. First off,
-take time to think about variables, time, and datasets. The sooner in a
-student's academic trajectory you can make a prediction, the sooner you can
-intervene--but the less accurate your predictions, and hence your intervention
-targeting, is likely to be. What data, and specifically which variables, do you
-have available to make predictions? What outcome are you trying to predict?
+questions about the prediction task before you pull together your data and start
+fitting models. First off, take time to think about variables, time, and data
+sets. The sooner in a student's academic trajectory you can make a prediction,
+the sooner you can intervene -- but the less accurate your predictions will be.
+What data, and specifically which variables, do you have available to make
+predictions? What outcome are you trying to predict?
 
 In the case of this guide, we are limiting our focus to using data available
 at the end of grade 7 to predict outcomes at the end of high school. A critical
@@ -111,18 +120,18 @@ different measures are collected during the process you are predicting -- you
 can't use data from the future to make predictions. If you're planning to use
 your model to make predictions for students at the end of 11th grade, for
 instance, and if most students take AP classes as seniors, you can't use data
-about AP coursetaking collected during senior year to predict the likelihood of
+about AP course-taking collected during senior year to predict the likelihood of
 college enrollment, even if you have that data available for past groups of
 students.
 
-We're using multiple cohorts of middle-school students for the predictive analytics
-task--students who were seventh graders between 2007 and in 2011. These are the
-cohorts for which we have access to reliable information on their high school
-graduation status (late graduate, on time graduate, dropout, transferred out,
-disappeared). For this guide you are being given the entire set of data so
-that you can explore different ways of organizing the data across cohorts.
-An example is that you may choose to explore your models and data using the
-earlier cohort, and evaluate their performance on more recent cohorts.
+We're using multiple cohorts of middle-school students for the predictive
+analytics task -- students who were seventh graders between 2007 and in 2011.
+These are the cohorts for which we have access to reliable information on their
+high school graduation status (late graduate, on time graduate, dropout,
+transferred out, disappeared). For this guide you are being given the entire set
+of data so that you can explore different ways of organizing the data across
+cohorts. An example is that you may choose to explore your models and data using
+the earlier cohort, and evaluate their performance on more recent cohorts.
 
 One last point -- even though the data is synthetic, we have simulated missing data
 for you. In the real world, you'll need to make predictions for every
@@ -143,13 +152,13 @@ commands as you wish.  If you're using a paper or PDF version of these
 materials, just read on--the R output appears below each section of commands.
 
 This guide is built using the data from the fictional state education agency of
-Montucky. This dataset includes simulated data for multiple cohorts of 7th graders along
-with their corresponding high school outcomes. Each observation (row) is a student,
-and includes associated information about the student's demographics, academic
-performance in 7th grade, associated school and district (in grade 7), last
-high school attended, and high school completion. For additional details on the
-data elements that makeup the synthetic data, there is a codebook available
-in the data subdirectory.
+Montucky. This data set includes simulated data for multiple cohorts of 7th
+graders along with their corresponding high school outcomes. Each observation
+(row) is a student, and includes associated information about the student's
+demographics, academic performance in 7th grade, associated school and district
+(in grade 7), last high school attended, and high school completion. For
+additional details on the data elements that makeup the synthetic data, there is
+a codebook available in the data sub-directory.
 
 ## Setup
 
@@ -183,49 +192,52 @@ source("../R/functions.R")
 
 load("../data/montucky.rda")
 ```
+## Explore the Data
 
-### Explore and validate the data
+### Uniqueness
 
 Ensure that the data imported correctly.
 
-First, ensure that the data is unique by student ID.
+First, check whether the the data is unique by student ID.
 
-```{r}
+```{r check_sid}
 nrow(sea_data) == n_distinct(sea_data$sid)
 ```
 
 Wait, what is the issue here?
 
-```{r}
+```{r check_first_sid}
 table(sea_data$sid == sea_data$sid[[1]]) # test how many times the first sid appears
 ```
 
 Why might our IDs be repeated 45 times? Let's look at how many LEAs we have in
-our SEA dataset:
+our SEA data set:
 
-```{r}
+```{r check_sid_by_lea}
 length(unique(sea_data$sch_g7_lea_id)) # test how many LEAs are in our data
 ```
 
 We see that our student IDs are not unique by LEA. That's an easy enough
 fix.
 
-```{r}
+```{r check_lea_sid}
 nrow(sea_data) == n_distinct(sea_data$sid, sea_data$sch_g7_lea_id)
 ```
 
 Let's append the LEA ID onto the student ID to make student IDs truly unique:
 
-```{r}
+```{r make_sid_uniq}
 sea_data$sid <- paste(sea_data$sid, sea_data$sch_g7_lea_id, sep = "-")
 ```
 
-```{r}
+```{r check_sid_uniq2}
 nrow(sea_data) == n_distinct(sea_data$sid)
 ```
 
+### Defining the Outcome
+
 A key initial task in building an EWS is to identify the cohort membership of
-students. When we build a predictive model need to identify two timepoints -
+students. When we build a predictive model need to identify two time points --
 when we will be making the prediction, and when the outcome we are predicting
 will be observed. In this case, we will be making the prediction upon receiving
 the 7th grade data on students (at the end of 7th grade), and we will
@@ -234,8 +246,7 @@ be predicting their completion of high school.
 Let's focus first on identifying the 7th grade year for each student. We have
 three year variables, what is their relationship:
 
-
-```{r}
+```{r tabulate_years}
 table(sea_data$year)
 table(sea_data$cohort_year)
 table(sea_data$cohort_grad_year)
@@ -243,7 +254,7 @@ table(sea_data$cohort_grad_year)
 
 From the data dictionary we know that the first year variable is the year
 that corresponds with the student entering 7th grade (`year`). The `cohort_year`
-variable defines the 9th grade cohort a student belongs to for measuring ontime
+variable defines the 9th grade cohort a student belongs to for measuring on-time
 graduation. Finally, the `cohort_grad_year` is the year that the cohort a
 student is a member of should graduate to be considered "on-time".
 
@@ -253,10 +264,10 @@ The definition of graduation types is an important design decision for our
 predictive analytic system. We have to set a time by which students are graduated
 so we know whether to count them as graduating or not completing. The state of
 Montucky uses a 4-year cohort graduation rate for most reporting, defining
-ontime graduation as graduation within 4 years of entering high school. This
+on-time graduation as graduation within 4 years of entering high school. This
 variable is defined as:
 
-```{r}
+```{r tabulate_grad_vars}
 table(sea_data$year_of_graduation == sea_data$cohort_grad_year)
 table(sea_data$ontime_grad)
 ```
@@ -266,11 +277,13 @@ of the data we make so that we can consistently use the data. In this case, it
 is necessary so we can definitively group students for the purposes of predicting
 their outcomes. You could consider alternative graduation timelines, for example:
 
-```{r}
+```{r tabulate_grad_vars_years}
 table(sea_data$year_of_graduation <= sea_data$cohort_grad_year + 1)
 ```
 
 What does this rule say? How is it different than the definition of on-time above?
+
+### Structure and Geography
 
 Now that we have a sense of the time structure of the data, let's look at
 geography. How many high schools and how many districts are? What are those
@@ -278,10 +291,10 @@ regional education services coops?
 
 We are going to be building a model for the an entire state, but stakeholders
 may have questions about how the model works for particular schools, districts,
-or regions. Let's practice exploring the data by these differerent geographies.
+or regions. Let's practice exploring the data by these different geographies.
 
 
-```{r}
+```{r check_schandlea_names}
 length(unique(sea_data$first_hs_name))
 length(unique(sea_data$first_hs_lea_id))
 table(sea_data$coop_name_g7, useNA = "always")
@@ -291,12 +304,12 @@ For this exercise, districts in Montucky are organized into cooperative regions.
 Cooperative regions are just groups of LEAs. It may be helpful to compare how
 our model performs in a given school, LEA, or cooperative region to the rest of the
 data in the state. As an example of this kind of analysis, select a specific
-coop region and explore its data, drawing comparisons to the full dataset. Which
+coop region and explore its data, drawing comparisons to the full data set. Which
 districts are part of this coop region and how many students do they have?
 Substitute different abbreviation codes for different coops and then replace the
 `my_coop` variable below.
 
-```{r}
+```{r check_coops}
 my_coop <- sea_data$coop_name_g7[50] # select the coop for the 50th observation
 # Which districts are in this coop and how many 7th graders do we have for each?
 table(sea_data$sch_g7_lea_id[sea_data$coop_name_g7 == my_coop],
@@ -305,6 +318,8 @@ table(sea_data$sch_g7_lea_id[sea_data$coop_name_g7 == my_coop],
 table(sea_data$sch_g7_name[sea_data$coop_name_g7 == my_coop],
       useNA = "always")
 ```
+
+### Student Subgroups
 
 What student subgroups are we interested in? Let's start by looking at student
 subgroups. Here's whether a student is male.
@@ -344,9 +359,9 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
 ```
 
 Now, let's look at high school outcomes. We won't examine them all, but you should.
-Here's the ontime high school graduation outcome variable we looked at above:
+Here's the on-time high school graduation outcome variable we looked at above:
 
-```{r}
+```{r check_ontime_grad}
 table(sea_data$ontime_grad, useNA = "always")
 ```
 
@@ -354,7 +369,7 @@ Wait! What if the data includes students who transferred out of state? That
 might bias the graduation rate and make it too low, because those 7th graders
 might show up as having dropped out.
 
-```{r}
+```{r check_grad_vars_others}
 table(sea_data$transferout, useNA = "always")
 table(transfer = sea_data$transferout, grad = sea_data$ontime_grad, useNA = "always")
 ```
@@ -366,7 +381,7 @@ The decision is yours, but it is important to consider all the possible high
 school outcomes when building a model and how the model will treat them.
 
 Let's look at the distribution of another outcome variable, `any_grad`, which
-includes late graduation and ontime graduation by both geography and by
+includes late graduation and on-time graduation by both geography and by
 subgroup.
 
 ```{r crosstab_grad, eval=FALSE}
@@ -392,7 +407,7 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
 
 ### Review Existing Indicator
 
-Model comparison is central to developing good predictive models. The dataset
+Model comparison is central to developing good predictive models. The data set
 for this guide comes with predictions from a fictitious vendor, which as an
 analyst your goal is to match or beat in terms of accuracy. This section of
 the guide explains how you can review and evaluate the accuracy of a model
@@ -404,6 +419,9 @@ First, let's check the format of the model predictions:
 summary(sea_data$vendor_ews_score)
 ```
 
+
+#### Confusion Matrix
+
 Instead of classifying students, each student receives a predicted probability
 for graduating. This is a common approach and predicted probabilities can be
 informative on their own. However, many of the best methods for understanding
@@ -411,56 +429,8 @@ model accuracy for binary classification require us to compare a binary predicti
 (will graduate, will not graduate) to the an observed binary outcome (did graduate,
 did not graduate).
 
-So, we need a way to convert this into a classification measure.
-One way to do this is to pick a threshold and declare all values greater than
-that threshold as being of the positive (graduation) class, and all values
-below as being members of the negative class.
 
-
-```{r}
-set_thresh <- 0.5
-
-conf_count <- table(observed = sea_data$ontime_grad,
-      pred = sea_data$vendor_ews_score > set_thresh)
-conf_count
-prop.table(conf_count)
-```
-
-This matrix tells us, for the threshold we have selected, how many graduates
-we identified successfully, how many non-graduates we identified successfully,
-and how many mistakes we made in each direction (this is known as a confusion
-matrix). This matrix allows you to calculate at a glance a number of different
-measures of accuracy - you can find great explanations of these metrics
-on the
-[Wikipedia page for confusion matrices](https://en.wikipedia.org/wiki/Confusion_matrix).
-
-
-Now, let's turn to identifying the predictors available for building an
-alternative model. Let's examine the student academic performance and behavioral
-variables that you can use as predictors. These are mostly numerical variables,
-so you should use the summary, histogram, and table commands to explore them.
-Here's some syntax for examining 7th grade math scores. You can replicate and
-edit it to examine other potential predictors and their distributions by
-different subgroups.
-
-
-### Review Existing Indicator
-
-Now that we are oriented to the data, let's turn our attention to the model
-predictions provided by the vendor. First, let's check the format:
-
-```{r coll_ready_tab}
-summary(sea_data$vendor_ews_score)
-```
-
-Instead of classifying students, each student receives a predicted probability
-for graduating. We need a way to convert this into a classification measure.
-One way to do this is to pick a threshold and declare all values greater than
-that threshold as being of the positive (graduation) class, and all values
-below as being members of the negative class.
-
-
-```{r}
+```{r conf_matrix_1}
 set_thresh <- 0.5
 
 conf_count <- table(observed = sea_data$ontime_grad,
@@ -489,7 +459,7 @@ summary, histogram, and table commands to explore them. Here's some syntax for
 examining 7th grade math scores. You can replicate and edit it to examine other
 potential predictors and their distributions by different subgroups.
 
-```{r}
+```{r math_score_explore}
 summary(sea_data$scale_score_7_math)
 hist(sea_data$scale_score_7_math)
 ```
@@ -501,6 +471,8 @@ by(sea_data$scale_score_7_math, sea_data$coop_name_g7, FUN = mean,
 by(sea_data$scale_score_7_math, sea_data$frpl_7, FUN = mean,
    na.rm = TRUE)
 ```
+
+### Missingness
 
 Finally, here's some sample code you can use to look at missingness patterns in
 the data. Note we use the `is.na()` function to test whether a value is missing.
@@ -541,7 +513,7 @@ grade math scores and percent of enrolled days absent through 7th grade. For
 your model, you can of course use more and different predictor
 variables. First, check the correlation between outcome and predictors.
 
-```{r}
+```{r comparison_of_preds}
 # TODO: Change this, should not be a correlation
 cor(sea_data[, c("ontime_grad", "scale_score_7_math", "pct_days_absent_7")],
     use = "pairwise.complete.obs")
@@ -551,8 +523,8 @@ These correlations do not look very promising! But remember, a correlation
 may not tell the whole story if other factors are involved, and correlations
 between binary variables and continuous variables are noisy indicators.
 
-It would be nice to have a better idea of
-the overall relationship between outcomes and predictors.
+It would be nice to have a better idea of the overall relationship between
+outcomes and predictors.
 
 But you can't make a meaningful scatterplot when the independent, or y value, is
 a binary outcome variable (try it!). Let's look at a technique to identify
@@ -564,17 +536,17 @@ too many values. First, define categories (in this case, round to the nearest
 percentage) of the percent absent variable, and then truncate the variable so that
 low-frequency values are grouped together.
 
-```{r}
+```{r absence_categories}
 sea_data$pct_absent_cat <- round(sea_data$pct_days_absent_7, digits = 0)
 table(sea_data$pct_absent_cat)
 sea_data$pct_absent_cat[sea_data$pct_absenct_cat >= 30] <- 30
 ```
 
-Next, define a variable which is the average ontime graduation rate for each
+Next, define a variable which is the average on-time graduation rate for each
 absence category, and then make a scatter plot of average graduation rates by
 absence percent.
 
-```{r}
+```{r plot_absence_categories}
 sea_data <- sea_data %>%
   group_by(pct_absent_cat) %>% # perform the operation for each value
   mutate(abs_ontime_grad = mean(ontime_grad, na.rm = TRUE)) # add a new variable
@@ -585,7 +557,7 @@ plot(sea_data$pct_absent_cat, sea_data$abs_ontime_grad)
 You can do the same thing for 7th grade test scores. First look at the math
 test score and notice that some scores appear to be outliers.
 
-```{r}
+```{r match_score_hists}
 hist(sea_data$scale_score_7_math)
 sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
 hist(sea_data$scale_score_7_math)
@@ -594,7 +566,7 @@ hist(sea_data$scale_score_7_math)
 You can do the same plot as above now by modifying the `group_by()`
 command.
 
-```{r}
+```{r math_grad_comparison}
 sea_data <- sea_data %>%
   mutate(math_7_cut = ntile(scale_score_7_math, n = 100)) %>%
   group_by(math_7_cut) %>% # perform the operation for each value
@@ -604,7 +576,8 @@ plot(sea_data$math_7_cut, sea_data$math_7_ontime_grad)
 
 ```
 
-This is a neat trick you can use to communicate your model predictions as well.
+This is a neat trick you can use to communicate your model predictions as well 
+which we will use again below. 
 
 ## Model
 
@@ -618,14 +591,16 @@ variable--any variation that is left over is treated as unexplained noise in the
 data, or error, even if there are additional variables not in the model which
 could explain more of the variation.
 
+### Baseline Model
+
 Once you've run a logistic regression, you can have R generate a variable with new,
 predicted outcomes for each observation in your data with the `predict()` function.
 The predictions are calculated using the model equation and ignore the
 unexplained noise in the data. For logistic regressions, the predicted outcomes
 take the form of a probability ranging 0 and 1. To start with, let's do a
-regression of ontime graduation on seventh grade math scores.
+regression of on-time graduation on seventh grade math scores.
 
-```{r}
+```{r fit_math_logit}
 math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
                   family = "binomial") # family tells R we want to fit a logistic
 ```
@@ -633,24 +608,27 @@ math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
 The default summary output for logistic regression in R is not very helpful for
 predictive modeling purposes.
 
-```{r}
+```{r logit_summary}
 summary(math_model)
 ```
 
-Even before you use the predict command, you can use the logistic output to learn
-something about the relationship between the predictor and the outcome variable.
-The Pseudo $R^{2}$ (read: psuedo R-squared) is a proxy for the share of variation in the
-outcome variable that is explained by the predictor. Statisticians don't like it
-when you take the pseudo $R^{2}$ too seriously, but it can be useful in predictive
-exercises to quickly get a sense of the explanatory power of variables in a
-logistic model. You can use the function `logit_rsquared()` in the `R/functions.R`
-file included with this guide to calculate this for your model.
+Even before you use the predict command, you can use the logistic output to
+learn something about the relationship between the predictor and the outcome
+variable. The Pseudo $R^{2}$ (read: pseudo R-squared) is a proxy for the share
+of variation in the outcome variable that is explained by the predictor.
+Statisticians don't like it when you take the pseudo $R^{2}$ too seriously, but
+it can be useful in predictive exercises to quickly get a sense of the
+explanatory power of variables in a logistic model. You can use the function
+`logit_rsquared()` in the `R/functions.R` file included with this guide to
+calculate this for your model.
 
-```{r}
+```{r logit_rsquare}
 logit_rsquared(math_model)
 ```
 
-We want to increase the psuedo $R^{2}$ using the data we have, so we should
+### Extend the Model
+
+We want to increase the pseudo $R^{2}$ using the data we have, so we should
 think about what additional information we have available that could inform
 our prediction of student graduation.
 
@@ -660,7 +638,7 @@ adding polynomial terms increase the pseudo $R^{2}$? You can use the formula
 interface in R to add functional transformations of predictors without generating
 new variables and find out.
 
-```{r}
+```{r math_model_2}
 math_model2 <- glm(ontime_grad ~ scale_score_7_math +
                      I(scale_score_7_math^2) + I(scale_score_7_math^3),
                    data = sea_data,
@@ -674,7 +652,7 @@ best to focus on including predictors that add meaningful explanatory power.
 
 Now take a look at the $R^{2}$ for the absence variable.
 
-```{r}
+```{r absence_model}
 absence_model <- glm(ontime_grad ~ pct_days_absent_7, data = sea_data,
                   family = "binomial")
 summary(absence_model)
@@ -683,7 +661,7 @@ logit_rsquared(absence_model)
 
 Let's combine our two predictors and test their combined power.
 
-```{r}
+```{r combo_model}
 combined_model <- glm(ontime_grad ~ pct_days_absent_7 + scale_score_7_math,
                       data = sea_data, family = "binomial")
 summary(combined_model)
@@ -693,27 +671,27 @@ logit_rsquared(combined_model)
 Using this combined model, let's use the predict command to make our first
 predictions.
 
-```{r}
+```{r predictions}
 sea_data$grad_pred <- predict(combined_model, newdata = sea_data,
                    type = "response") # this tells R to give us a probability
 ```
 
-This generates a new variable with the probability of ontime high school
+This generates a new variable with the probability of on-time high school
 graduation, according to the model. But if you look at the number of
 observations with predictions, you'll see that it is smaller than the total
 number of students. This is because R doesn't use observations that have
 missing data for any of the variables in the model.
 
-```{r}
+```{r tabulate_predictions}
 table(is.na(sea_data$grad_pred))
 ```
 
 Let's convert this probability to a 0/1 indicator for whether or not a student
-is likely to graduate ontime. A good rule of thumb when starting out is to set
+is likely to graduate on-time. A good rule of thumb when starting out is to set
 the probability cutoff at the mean of the outcome variable. In this example,
 we can store this value as a variable:
 
-```{r}
+```{r set_threshold}
 basic_thresh <- mean(sea_data$ontime_grad)
 basic_thresh
 ```
@@ -721,7 +699,7 @@ basic_thresh
 If the probability in the model is equal to or
 greater than this threshold, we'll say the student is likely to graduate.
 
-```{r}
+```{r cut_grad_indicator}
 sea_data$grad_indicator <- ifelse(sea_data$grad_pred > basic_thresh, 1, 0)
 table(sea_data$grad_indicator, useNA = "always")
 ```
@@ -740,9 +718,11 @@ plot(sea_data$grad_pred_cut, sea_data$grad_pred_cut_grad)
 
 ```
 
+### Measure Model Accuracy
+
 Lets evaluate the accuracy of the model by comparing the predictions to the
 actual graduation outcomes for the students for whom we have predictions. This
-type of crosstab is called a "confusion matrix." The observations in the upper
+type of cross tab is called a "confusion matrix." The observations in the upper
 right corner, where the indicator and the actual outcome are both 0, are true
 negatives. The observations in the lower right corner, where the indicator and
 the outcome are both 1, are true positives. The upper right corner contains
@@ -753,13 +733,14 @@ got 56.1 percent of the predictions right.
 ```{r}
 prop.table(
   table(
-    grad = sea_data$ontime_grad, pred = sea_data$grad_indicator)) %>% # shorthand way to round
+    grad = sea_data$ontime_grad, 
+    pred = sea_data$grad_indicator)) %>% # shorthand way to round
   round(3)
 ```
 
-However, most of the wrong predictions are false negatives--these are
+However, most of the wrong predictions are false negatives -- these are
 students who have been flagged as dropout risks even though they
-did graduate ontime. If you want your indicator system to be have fewer false
+did graduate on-time. If you want your indicator system to be have fewer false
 negatives, you can change the probability cutoff. This cutoff has a lower share
 of false positives and a higher share of false negatives, with a somewhat lower
 share of correct predictions.
@@ -777,7 +758,7 @@ as well:
 ```{r}
 prop.table(table(Observed = sea_data$ontime_grad,
                  Predicted = sea_data$grad_pred > new_thresh,
-                 useNA="always")) %>% round(3)
+                 useNA = "always")) %>% round(3)
 ```
 
 This table tells us that of our observations that have missing data for their 
@@ -856,7 +837,7 @@ where we have an uneven proportion of cases in each class (e.g. we have many mor
 it can be helpful to look at a metric like the AUC, which stands for "area under the
 curve." The curve here refers to the receiver-operator characteristic, a
 [statistic developed in the field of signal detection theory during WWII](https://en.wikipedia.org/wiki/Receiver_operating_characteristic#History).  
-This metric allows you to explicitly weigh the tradeoff in identifying a higher
+This metric allows you to explicitly weigh the trade-off in identifying a higher
 proportion of an event (e.g. non-graduations) against the additional
 false-positives (declaring students who will graduate as non-graduates) it will
 cost to achieve that.
@@ -888,6 +869,7 @@ You can also calculate the numeric summaries instead of just the graphs. To
 do this let's use the `caret` package:
 
 ```{r}
+library(caret)
 # We must wrap these each in calls to factor because of how this function expects
 # the data to be formatted
 caret::confusionMatrix(factor(sea_data$grad_indicator),
@@ -897,7 +879,7 @@ caret::confusionMatrix(factor(sea_data$grad_indicator),
 A couple of last thoughts and notes. First, note that so far we haven't done any
 out-of-sample testing. We know from the pre-reading that we should never trust
 our model fit measures on data the model was fit to -- statistical models are
-overly confident. To combat this, you should subdivide your dataset. There are
+overly confident. To combat this, you should subdivide your data set. There are
 many strategies you can choose from depending on how much data you have and the
 nature of your problem - for the EWS case, we can use the first two cohorts to
 build our models and the latter two cohorts to evaluate that fit.
@@ -1184,7 +1166,7 @@ str(current_data)
 ## Advanced Techniques
 
 Predictive analytic techniques are constantly being refined and evolving. This 
-section will review a few techniques that I have found helful when doing 
+section will review a few techniques that I have found helpful when doing 
 predictive analytic work with education data. 
 
 ### Regression Trees
@@ -1194,7 +1176,7 @@ data structured with rows and columns, are tree algorithms. Regression tree
 algorithms come in many different flavors (forests, boosted trees, pruned 
 trees, etc.), but the basic strategy is to partition the data by splits in the 
 available predictors so each branch of the tree uniquely identifies a specific 
-combination of values of predictors that divde the outcome well between the 
+combination of values of predictors that divide the outcome well between the 
 two groups. 
 
 
@@ -1292,7 +1274,7 @@ caret::varImp(caret_mod)
 plot(caret::varImp(caret_mod))
 ```
 
-### Probability Tradeoffs
+### Probability Trade offs
 
 Another 
 
@@ -1399,68 +1381,16 @@ Sprott, and Taff placed the predictive performance of over 100 dropout risk
 indicators onto the ROC scale (true positive rate and false negative rate). 
 Using this framework, we can recreate a plot from that paper and annotate it with 
 the performance of our model to benchmark against previous studies. TO do this 
-we need the data from Bowers et. al. and a dataframe of 
+we need the data from Bowers et. al. and a data frame of 
 
 
 ```{r}
 ################################################################################
 ## Advanced: Make a Bowers plot
 #################################################################################
-# Get the data for comparable points
-url <- "https://raw.githubusercontent.com/jknowles/DEWSatDoGoodData2016/master/data/BowersEWSReviewData.csv"
-ews <- read.csv(url)
-
-# Clean up the coding of the data with better labels
-# This is optional, but it highlights some reference
-# models
-ews$flag <- "Other EWI"
-ews$flag[ews$id==1 | ews$id==2] <- "Chicago On-Track"
-ews$flag[ews$id > 3 & ews$id <14] <- "Balfanz ABC"
-ews$flag[ews$id ==85] <- "Muth?n Math GMM"
-ews$flag[ews$id==19] <- "Bowers GPA GMM"
-ews$flag <- factor(ews$flag)
-ews$flag <- relevel(ews$flag, ref="Other EWI")
-mycol <- c("Other EWI" = "gray70", "Chicago On-Track" = "blue",
-           "Balfanz ABC" = "purple",
-           "Muthen Math GMM" = "orange",
-           "Bowers GPA GMM" = "dark red")
-
-# The big block of plotting code, you only need to modify the last
-# couple of lines, the rest adds annotations and labels which you
-# can switch on and off if you like
-
-ggplot(ews) + aes(x = 1-specificity, y = sensitivity,
-                shape = flag, size = I(4), color = flag) +
-         geom_point() +
-  # Label the shape legend
-  scale_shape("EWI Type") +
-  # Label the color legend and customize it
-  scale_color_manual("EWI Type", values = mycol) +
-  # Add a reference 45 degree line representing random chance
-  geom_abline(intercept = 0, slope = 1, linetype = 2) +
-  # Set the scales of the chart to not distort distances
-  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
-  # Add a simple theme to avoid clutter
-  theme_bw() +
-  # Label the axes
-  labs(x="False Alarm Proportion", y="True Positive Proportion",
-       title = "ROC Accuracy of Early Warning Indicators") +
-  # Place the legend in the bottom right
-  theme(legend.position = c(0.8, 0.2),
-        legend.background = element_rect(fill = NULL,
-                                         color = "black")) +
-  # Add arrows to annotate the plot
-  annotate(geom="segment", x = 0.55, y = 0.625,
-           yend = 0.785, xend = 0.4,
-           arrow = arrow(length = unit(0.5, "cm"))) +
-  # Label the arrow
-  annotate(geom="text", x = .365, y = .81, label="Better Prediction") +
-  annotate(geom="segment", x = 0.65, y = 0.625, yend = 0.5,
-           xend = 0.75, arrow = arrow(length = unit(0.5, "cm"))) +
-  annotate(geom="text", x = .75, y = .48, label="Worse Prediction") +
-  annotate(geom="text", x = .75, y = .78, angle = 37, label="Random Guess")  +
+bowers_plot() + 
   # Add your annotation here:
-  annotate(geom="point",
+  annotate(geom = "point",
            x = 1 - pull(estimates_tbl %>% yardstick::spec(truth, estimate)),
            y = pull(estimates_tbl %>% yardstick::sens(truth, estimate)),
            size = 5, color = "red")

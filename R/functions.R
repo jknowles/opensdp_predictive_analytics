@@ -102,3 +102,67 @@ get_CL_vcov <- function(model, cluster){
   vcovCL <- dfc*sandwich(model, meat=crossprod(uj)/N)
   return(vcovCL)
 }
+
+get_bowers_data <- function() {
+  url <- "https://raw.githubusercontent.com/jknowles/DEWSatDoGoodData2016/master/data/BowersEWSReviewData.csv"
+  ews <- read.csv(url)
+  return(ews)
+}
+
+bowers_plot <- function() {
+  # Get data
+  ews <- get_bowers_data()
+  # format data
+  # Clean up the coding of the data with better labels
+  # This is optional, but it highlights some reference
+  # models
+  ews$flag <- "Other EWI"
+  ews$flag[ews$id == 1 | ews$id == 2] <- "Chicago On-Track"
+  ews$flag[ews$id > 3 & ews$id < 14] <- "Balfanz ABC"
+  ews$flag[ews$id == 85] <- "Muthen Math GMM"
+  ews$flag[ews$id == 19] <- "Bowers GPA GMM"
+  ews$flag <- factor(ews$flag)
+  ews$flag <- relevel(ews$flag, ref = "Other EWI")
+  # Set colors
+  mycol <- c("Other EWI" = "gray70", "Chicago On-Track" = "blue",
+             "Balfanz ABC" = "purple",
+             "Muthen Math GMM" = "orange",
+             "Bowers GPA GMM" = "dark red")
+  # The big block of plotting code, you only need to modify the last
+  # couple of lines, the rest adds annotations and labels which you
+  # can switch on and off if you like
+  p1 <- ggplot(ews) + aes(x = 1-specificity, y = sensitivity,
+                    shape = flag, size = I(4), color = flag) +
+    geom_point() +
+    # Label the shape legend
+    scale_shape("EWI Type") +
+    # Label the color legend and customize it
+    scale_color_manual("EWI Type", values = mycol) +
+    # Add a reference 45 degree line representing random chance
+    geom_abline(intercept = 0, slope = 1, linetype = 2) +
+    # Set the scales of the chart to not distort distances
+    coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+    # Add a simple theme to avoid clutter
+    theme_bw() +
+    # Label the axes
+    labs(x = "False Alarm Proportion", y = "True Positive Proportion",
+         title = "ROC Accuracy of Early Warning Indicators") +
+    # Place the legend in the bottom right
+    theme(legend.position = c(0.8, 0.2),
+          legend.background = element_rect(fill = NULL,
+                                           color = "black")) +
+    # Add arrows to annotate the plot
+    annotate(geom = "segment", x = 0.55, y = 0.625,
+             yend = 0.785, xend = 0.4,
+             arrow = arrow(length = unit(0.5, "cm"))) +
+    # Label the arrow
+    annotate(geom="text", x = .365, y = .81, label="Better Prediction") +
+    annotate(geom="segment", x = 0.65, y = 0.625, yend = 0.5,
+             xend = 0.75, arrow = arrow(length = unit(0.5, "cm"))) +
+    annotate(geom="text", x = .75, y = .48, label="Worse Prediction") +
+    annotate(geom="text", x = .75, y = .78, angle = 37, label="Random Guess")
+  
+  return(p1)
+  
+    
+}
