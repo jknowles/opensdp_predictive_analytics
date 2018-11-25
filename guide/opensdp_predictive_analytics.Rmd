@@ -419,16 +419,26 @@ First, let's check the format of the model predictions:
 summary(sea_data$vendor_ews_score)
 ```
 
+There are two things to notice about this vendor's prediction. First, instead of
+classifying students, each student receives a predicted probability for
+graduating. This is a common approach. Instead of saying a student will graduate
+or not graduate, we can say what the probability is that each student will
+graduate. A second thing to notice is that we have a prediction for every single 
+student in the data - no missing values. We already know some students have 
+missing data for some variables. Making predictions for all students is a really 
+great feature, but it calls into question what data elements are being used to 
+make those predictions and how accurate such predictions may be. 
 
 #### Confusion Matrix
 
-Instead of classifying students, each student receives a predicted probability
-for graduating. This is a common approach and predicted probabilities can be
-informative on their own. However, many of the best methods for understanding
-model accuracy for binary classification require us to compare a binary prediction
-(will graduate, will not graduate) to the an observed binary outcome (did graduate,
-did not graduate).
-
+A standard way to interpret the accuracy of predictive models that are classifying 
+cases into two categories is called a confusion matrix. This allows us to 
+compare a binary prediction (will graduate, will not graduate) to the an 
+observed binary outcome (did graduate, did not graduate). To use this technique 
+we select a probability threshold, above which observations are classified in 
+one category, and below which they fall into the other category. A good threshold 
+to try at first is 0.5. We can create a prediction on the fly and build the 
+confusion matrix using the code below:
 
 ```{r conf_matrix_1}
 set_thresh <- 0.5
@@ -436,35 +446,76 @@ set_thresh <- 0.5
 conf_count <- table(observed = sea_data$ontime_grad,
       pred = sea_data$vendor_ews_score > set_thresh)
 conf_count
-# Round for easier interpretation
+```
+
+The diagonal of the matrix tells us which classifications we made correctly. In 
+this case, we predicted and were correct that 31 students would not graduate 
+on time. We also predicted correctly 81,073 students who graduated on-time. 
+However, we incorrectly predicted that 42,670 students would graduate on-time, 
+but they did not -- this is not a very good prediction. We also predicted 
+14 students would not graduate, but they did wind up graduating. 
+
+We'll look at several different ways of defining accuracy a little bit further 
+below, but here we can see that we do a good job identifying most of the students 
+who graduate on-time, but we do that by predicting almost everyone to graduate 
+on-time, which is not a very useful analytic. 
+
+So, using a threshold of 0.5 we can see the vendor model predicts almost 
+everyone to graduate, which results in getting a lot of correct predictions 
+of students who will graduate, but failing to identify very many students 
+who are at risk. Let's look at another method for setting the threshold and 
+review the resulting confusion matrix. 
+
+A common approach is to set the threshold at the mean of the predicted 
+probability. 
+
+```{r}
+set_thresh <- mean(sea_data$vendor_ews_score)
+
+conf_count <- table(observed = sea_data$ontime_grad,
+      pred = sea_data$vendor_ews_score > set_thresh)
+conf_count
+# Create a proportion table and round for easier interpretation
 round( 
   prop.table(conf_count), 
     digits = 3
 )
-
-
 ```
 
-This matrix tells us, for the threshold we have selected, how many graduates
-we identified successfully, how many non-graduates we identified successfully,
-and how many mistakes we made in each direction (this is known as a confusion
-matrix and will be discussed at length at the workshop!).
+Doing this, we see that we identify many fewer students who graduate on-time 
+but we in exchange we identify many more students who do not graduate on-time. 
+For example, we identify 20,826 students who do not graduate on-time successfully 
+as non-graduates. We failed to identify 21,875 additional students who did not 
+graduate on-time. We falsely identified 20,867 students as likely to not graduate 
+on-time, but who in fact do graduate on time. Finally, we identify 60,220 students 
+to graduate on-time who do graduate on-time. 
 
-How does this compare with the vendor's marketing material and stated accuracy?
+All we have done is changed the our threshold for action from 0.5 to the mean 
+of the predicted probability 
+`r round(mean(sea_data$vendor_ews_score), digits = 2)`. So, we can already see 
+that how to interpret the accuracy of our predictors depends both on what we 
+value for accuracy, and how we set our probability cutoff for our predicted 
+probability. 
 
-Now, let's turn to identifying the predictors available for building an alternative
-model. Let's examine the performance and behavioral variables that you can
-use as predictors. These are mostly numerical variables, so you should use the
-summary, histogram, and table commands to explore them. Here's some syntax for
-examining 7th grade math scores. You can replicate and edit it to examine other
-potential predictors and their distributions by different subgroups.
+### Explore Possible Predictors
+
+Now that we understand how the vendor's prediction model is working, let's turn to
+identifying the predictors available for building an alternative model. Let's
+examine the performance and behavioral variables that you can use as predictors.
+These are mostly numerical variables, so you should use `summary()`, `hist()`,
+and `table()` functions explore them. Here's some syntax for examining 7th grade
+math scores. You can replicate and edit it to examine other potential predictors
+and their distributions by different subgroups.
 
 ```{r math_score_explore}
 summary(sea_data$scale_score_7_math)
 hist(sea_data$scale_score_7_math)
 ```
 
+A quick way to explore variables by a category is to use the `by()` function. 
+
 ```{r mean_score_by_demog}
+# TODO: Consider dropping this
 by(sea_data$scale_score_7_math, sea_data$coop_name_g7, FUN = mean,
    na.rm = TRUE)
 
@@ -472,60 +523,29 @@ by(sea_data$scale_score_7_math, sea_data$frpl_7, FUN = mean,
    na.rm = TRUE)
 ```
 
-### Missingness
-
-Finally, here's some sample code you can use to look at missingness patterns in
-the data. Note we use the `is.na()` function to test whether a value is missing.
-
-```{r missingness_checks}
-for(var in c("coop_name_g7", "male", "race_ethnicity")){
-  print(var)
-  print(
-  prop.table(table(sea_data[, var],
-                         "missing_math" = is.na(sea_data$pct_days_absent_7)), 1)
-  )
-}
-
-```
-
-Handling missing values is another case where business rules will come into play.
-
-Did you see any outlier or impossible values while you were exploring the data?
-If so, you might want to truncate them or change them to missing. Here's how you
-can replace a numeric variable with a missing value if it is larger than a
-certain number (in this case, 100 percent).
-
-```{r abs_trunc}
-hist(sea_data$pct_days_absent_7)
-sea_data$pct_days_absent_7[sea_data$pct_days_absent_7 > 100] <- NA
-hist(sea_data$pct_days_absent_7)
-```
-
-Trimming the data in this way is another example of a business rule. You
-may wish to trim the absences even further in this data. You may also wish to
-assign a different value other than missing for unusual values - such as the
-mean or median value.
-
-Now that you've explored the data, you can start to examine the relationship
-between predictor and outcome variables. Here we'll continue to look at the high
-school graduation outcome, and we'll restrict the predictors to just two: 7th
-grade math scores and percent of enrolled days absent through 7th grade. For
-your model, you can of course use more and different predictor
-variables. First, check the correlation between outcome and predictors.
+After exploring the predictors themselves, a good next step is to explore their 
+relationship to the outcome. Let's start with the relationship between on-time 
+graduation and 7th grade math scores and the percent of days absent in 7th grade. 
+A good way to do this is to compare the difference in the means between graduates 
+and non-graduates. We can standardize this difference using the standard deviation, 
+a measure that is known as an effect size. Comparing differences in terms of 
+standard deviations gives us a good sense of how different graduates and 
+non-graduates are from one another on key measures. To simplify this process, 
+we can use the `effect_size_diff()` function from the `functions.R` script. 
 
 ```{r comparison_of_preds}
-# TODO: Change this, should not be a correlation
-cor(sea_data[, c("ontime_grad", "scale_score_7_math", "pct_days_absent_7")],
-    use = "pairwise.complete.obs")
+effect_size_diff(sea_data$scale_score_7_math, sea_data$ontime_grad, 
+                 na.rm = TRUE)
+
+effect_size_diff(sea_data$pct_days_absent_7, sea_data$ontime_grad, 
+                 na.rm = TRUE)
+
 ```
 
-These correlations do not look very promising! But remember, a correlation
-may not tell the whole story if other factors are involved, and correlations
-between binary variables and continuous variables are noisy indicators.
+We can see that math scores differentiate graduates and non-graduates in these 
+data, but the two groups are nearly identical in terms of their attendance rates. 
 
-It would be nice to have a better idea of the overall relationship between
-outcomes and predictors.
-
+It can be helpful at this point to visually inspect these differences as well. 
 But you can't make a meaningful scatterplot when the independent, or y value, is
 a binary outcome variable (try it!). Let's look at a technique to identify
 the relationship between a continuous variable and a binary outcome.
@@ -578,6 +598,41 @@ plot(sea_data$math_7_cut, sea_data$math_7_ontime_grad)
 
 This is a neat trick you can use to communicate your model predictions as well 
 which we will use again below. 
+
+### Missingness
+
+Finally, here's some sample code you can use to look at missingness patterns in
+the data. Note we use the `is.na()` function to test whether a value is missing.
+
+```{r missingness_checks}
+for(var in c("coop_name_g7", "male", "race_ethnicity")){
+  print(var)
+  print(
+  prop.table(table(sea_data[, var],
+                         "missing_math" = is.na(sea_data$pct_days_absent_7)), 1)
+  )
+}
+
+```
+
+Handling missing values is another case where business rules will come into play.
+
+Did you see any outlier or impossible values while you were exploring the data?
+If so, you might want to truncate them or change them to missing. Here's how you
+can replace a numeric variable with a missing value if it is larger than a
+certain number (in this case, 100 percent).
+
+```{r abs_trunc}
+hist(sea_data$pct_days_absent_7)
+sea_data$pct_days_absent_7[sea_data$pct_days_absent_7 > 100] <- NA
+hist(sea_data$pct_days_absent_7)
+```
+
+Trimming the data in this way is another example of a business rule. You
+may wish to trim the absences even further in this data. You may also wish to
+assign a different value other than missing for unusual values - such as the
+mean or median value.
+
 
 ## Model
 

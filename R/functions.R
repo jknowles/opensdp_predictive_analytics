@@ -2,6 +2,15 @@
 # Jared Knowles
 # model = a fitted glm in R
 # newdata = an optional data.frame of new fitted values
+#' Title
+#'
+#' @param model 
+#' @param newdata 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 auc.glm <- function(model, newdata = NULL){
   if(missing(newdata)){
     resp <- model$y
@@ -26,6 +35,14 @@ logit_rsquared <- function(model){
 # Calculate the prevalence of the second class in a two-class outcome
 # Jared Knowles
 # resp = a vector of bivariate responses (0, 1)
+#' Title
+#'
+#' @param resp 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_prevl <- function(resp){
   table(resp)[[2]] / sum(table(resp))
 }
@@ -36,6 +53,15 @@ get_prevl <- function(resp){
 # Jared KNowles
 # resp = vector of outcome
 # pred = predicted outcome
+#' Title
+#'
+#' @param resp 
+#' @param pred 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_thresh <- function(resp, pred){
   prev <- get_prevl(resp)
   rocobj <- roc(resp, pred)
@@ -48,6 +74,16 @@ get_thresh <- function(resp, pred){
 # model = model object
 # data = newdata to use if needed
 # thresh = optional value from 0 to 1 to cut predictions
+#' Title
+#'
+#' @param model 
+#' @param data 
+#' @param thresh 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 conf_matrix <- function(model, data = NULL, thresh = NULL) {
   if(missing(data)){
     if(class(model)[1] %in% c("lmerMod", "glmerMod")){
@@ -85,6 +121,15 @@ zeroNA <- function(x){
 }
 
 # Cluster standard errors
+#' Title
+#'
+#' @param model 
+#' @param cluster 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_CL_vcov <- function(model, cluster){
   # cluster is an actual vector of clusters from data passed to model
   # from: http://rforpublichealth.blogspot.com/2014/10/easy-clustered-standard-errors-in-r.html
@@ -109,6 +154,12 @@ get_bowers_data <- function() {
   return(ews)
 }
 
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
 bowers_plot <- function() {
   # Get data
   ews <- get_bowers_data()
@@ -165,4 +216,24 @@ bowers_plot <- function() {
   return(p1)
   
     
+}
+
+
+# Calculate effect size difference between two groups
+
+#' Title
+#'
+#' @param x 
+#' @param group_idx 
+#' @param na.rm 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+effect_size_diff <- function(x, group_idx, na.rm = TRUE) {
+  tmp <- by(x, group_idx, FUN = mean,
+            na.rm = na.rm)
+  diff(tmp) / sd(x, na.rm = na.rm)
+  
 }
