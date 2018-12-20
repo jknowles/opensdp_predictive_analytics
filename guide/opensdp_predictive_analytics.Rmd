@@ -590,7 +590,8 @@ command.
 sea_data <- sea_data %>%
   mutate(math_7_cut = ntile(scale_score_7_math, n = 100)) %>%
   group_by(math_7_cut) %>% # perform the operation for each value
-  mutate(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) # add a new variable
+  mutate(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) %>% 
+  as.data.frame()# add a new variable
 
 plot(sea_data$math_7_cut, sea_data$math_7_ontime_grad)
 
@@ -1233,10 +1234,6 @@ trees, etc.), but the basic strategy is to partition the data by splits in the
 available predictors so each branch of the tree uniquely identifies a specific 
 combination of values of predictors that divide the outcome well between the 
 two groups. 
-
-
-
-
 
 ```{r}
 ########################################################################
