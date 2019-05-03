@@ -1255,10 +1255,6 @@ available predictors so each branch of the tree uniquely identifies a specific
 combination of values of predictors that divide the outcome well between the 
 two groups. 
 
-
-
-
-
 ```{r}
 ########################################################################
 # Build and plot a regression tree
