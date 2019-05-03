@@ -1,25 +1,27 @@
 ---
-title: "Title of Your Analysis Here"
-author: "Your Name Here"
-date: "Jun 30, 2018 (Replace with date uploaded to OpenSDP)"
-output:
+title: "Introduction to Predictive Analytics in Education"
+author: "Dashiell Young-Saver, Jared Knowles"
+date: "May 30, 2019"
+output: 
   html_document:
     theme: simplex
-    css: ../includes/styles.css
+    css: styles.css
     highlight: NULL
     keep_md: true
     toc: true
     toc_depth: 3
     toc_float: true
     number_sections: false
+    code_folding: show
+    includes:
+      in_header: zz-sdp_ga.html
 ---
 
 # Predictive Analytics in Education
 
-
 <div class="navbar navbar-default navbar-fixed-top" id="logo">
 <div class="container">
-<img src="../img/open_sdp_logo_red.png" style="display: block; margin: 0 auto; height: 115px;">
+<img src="https://opensdp.github.io/assets/images/OpenSDP-Banner_crimson.jpg" style="display: block; margin: 0 auto; height: 115px;">
 </div>
 </div>
 
@@ -41,17 +43,7 @@ data like this or the procedure used to generate the data, the code used
 is included in the data subdirectory. 
 
 
-```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
-# Set options for knitr
-library(knitr)
-knitr::opts_chunk$set(comment=NA, warning=FALSE, echo=TRUE,
-                      root.dir = normalizePath("../"),
-                      error=FALSE, message=FALSE, fig.align='center',
-                      fig.width=8, fig.height=6, dpi = 144,
-                      fig.path = "../figure/",
-                      cache.path = "../cache/")
-options(width=80)
-```
+
 
 
 
@@ -165,7 +157,8 @@ a codebook available in the data sub-directory.
 To prepare for this project you will need to ensure that your R installation
 has the necessary add-on packages and that you can read in the training data.
 
-```{r installPackages, eval=FALSE}
+
+```r
 # Install add-on packages needed
 install.packages("dplyr") # this will update your installed version to align with
 install.packages("pROC") # those in the tutorial
@@ -174,7 +167,8 @@ install.packages("caret") # for machine learning
 install.packages("future") # for multicore processing on Windows/Mac/Linux
 ```
 
-```{r loadWorkspace}
+
+```r
 # Load the packages you need
 library(dplyr)
 library(pROC)
@@ -200,38 +194,66 @@ Ensure that the data imported correctly.
 
 First, check whether the the data is unique by student ID.
 
-```{r check_sid}
+
+```r
 nrow(sea_data) == n_distinct(sea_data$sid)
+```
+
+```
+[1] FALSE
 ```
 
 Wait, what is the issue here?
 
-```{r check_first_sid}
+
+```r
 table(sea_data$sid == sea_data$sid[[1]]) # test how many times the first sid appears
+```
+
+```
+
+ FALSE   TRUE 
+123743     45 
 ```
 
 Why might our IDs be repeated 45 times? Let's look at how many LEAs we have in
 our SEA data set:
 
-```{r check_sid_by_lea}
+
+```r
 length(unique(sea_data$sch_g7_lea_id)) # test how many LEAs are in our data
+```
+
+```
+[1] 45
 ```
 
 We see that our student IDs are not unique by LEA. That's an easy enough
 fix.
 
-```{r check_lea_sid}
+
+```r
 nrow(sea_data) == n_distinct(sea_data$sid, sea_data$sch_g7_lea_id)
+```
+
+```
+[1] TRUE
 ```
 
 Let's append the LEA ID onto the student ID to make student IDs truly unique:
 
-```{r make_sid_uniq}
+
+```r
 sea_data$sid <- paste(sea_data$sid, sea_data$sch_g7_lea_id, sep = "-")
 ```
 
-```{r check_sid_uniq2}
+
+```r
 nrow(sea_data) == n_distinct(sea_data$sid)
+```
+
+```
+[1] TRUE
 ```
 
 ### Defining the Outcome
@@ -246,10 +268,35 @@ be predicting their completion of high school.
 Let's focus first on identifying the 7th grade year for each student. We have
 three year variables, what is their relationship:
 
-```{r tabulate_years}
+
+```r
 table(sea_data$year)
+```
+
+```
+
+ 2001  2002  2003  2004  2005  2006  2007  2008  2009  2010  2011 
+   10    91  5831 27466 34072 31210 23616  1267   215     9     1 
+```
+
+```r
 table(sea_data$cohort_year)
+```
+
+```
+
+ 2003  2004  2005  2006  2007  2008  2009  2010  2011  2012  2013 
+   10    91  5831 27466 34072 31210 23616  1267   215     9     1 
+```
+
+```r
 table(sea_data$cohort_grad_year)
+```
+
+```
+
+ 2006  2007  2008  2009  2010  2011  2012  2013  2014  2015  2016 
+   10    91  5831 27466 34072 31210 23616  1267   215     9     1 
 ```
 
 From the data dictionary we know that the first year variable is the year
@@ -267,9 +314,25 @@ Montucky uses a 4-year cohort graduation rate for most reporting, defining
 on-time graduation as graduation within 4 years of entering high school. This
 variable is defined as:
 
-```{r tabulate_grad_vars}
+
+```r
 table(sea_data$year_of_graduation == sea_data$cohort_grad_year)
+```
+
+```
+
+FALSE  TRUE 
+ 1889 81087 
+```
+
+```r
 table(sea_data$ontime_grad)
+```
+
+```
+
+    0     1 
+42701 81087 
 ```
 
 This is an example of a business rule - it's a restriction on the definition
@@ -277,8 +340,15 @@ of the data we make so that we can consistently use the data. In this case, it
 is necessary so we can definitively group students for the purposes of predicting
 their outcomes. You could consider alternative graduation timelines, for example:
 
-```{r tabulate_grad_vars_years}
+
+```r
 table(sea_data$year_of_graduation <= sea_data$cohort_grad_year + 1)
+```
+
+```
+
+FALSE  TRUE 
+  211 82765 
 ```
 
 What does this rule say? How is it different than the definition of on-time above?
@@ -294,10 +364,33 @@ may have questions about how the model works for particular schools, districts,
 or regions. Let's practice exploring the data by these different geographies.
 
 
-```{r check_schandlea_names}
+
+```r
 length(unique(sea_data$first_hs_name))
+```
+
+```
+[1] 297
+```
+
+```r
 length(unique(sea_data$first_hs_lea_id))
+```
+
+```
+[1] 46
+```
+
+```r
 table(sea_data$coop_name_g7, useNA = "always")
+```
+
+```
+
+     Angelea        Birch     Caldwell Cold Springs         Hope       Marvel 
+       15725        13444        17385        15668        12629        14983 
+     Monarch       Weston  Wintergreen         <NA> 
+       12139        10131        11684            0 
 ```
 
 For this exercise, districts in Montucky are organized into cooperative regions.
@@ -309,14 +402,48 @@ districts are part of this coop region and how many students do they have?
 Substitute different abbreviation codes for different coops and then replace the
 `my_coop` variable below.
 
-```{r check_coops}
+
+```r
 my_coop <- sea_data$coop_name_g7[50] # select the coop for the 50th observation
 # Which districts are in this coop and how many 7th graders do we have for each?
 table(sea_data$sch_g7_lea_id[sea_data$coop_name_g7 == my_coop],
       useNA = "always")
+```
+
+```
+
+  01  028  033  044   09 <NA> 
+2499 2500 4996 2497 2491    0 
+```
+
+```r
 # which schools?
 table(sea_data$sch_g7_name[sea_data$coop_name_g7 == my_coop],
       useNA = "always")
+```
+
+```
+
+       Adams        Adler        Allen        Baker       Bootes       Carmen 
+         309          892           35           98          269           91 
+     Chelsea     Chestnut      Coleman    Commander  Copper Cove  Cornerstone 
+         196          365          235          170          389          654 
+      Dalton     Danehill      Dogwood    Gail Hill   Greenfield      Hanover 
+         859          150          146          198          146          444 
+   Hawthorne     Hillside      Hoffman       Irving     Islander      Kennedy 
+         140          285          227          115          305          380 
+   Lakeshore        Lever     Majestic       Meadow     Meridian Milton South 
+         184          155           60          305          156          903 
+      Murphy     Oak Tree       Oriole         Park       Peyton      Prairie 
+         195          236          159         1424          174           18 
+     Rainbow  Reigh Count        Reyes      Ritchie      Sargent    Sea Glass 
+         176          110          392          263          104          137 
+    Sterling Stone Street       Tupelo   Valley Way    Van Dusen       Venice 
+         302          171          179          253          180          628 
+     Wallaby   Wellington  Whitebridge   Winchester   Woodpecker       Yawkey 
+         143          110          151          124          126          367 
+        <NA> 
+           0 
 ```
 
 ### Student Subgroups
@@ -324,13 +451,21 @@ table(sea_data$sch_g7_name[sea_data$coop_name_g7 == my_coop],
 What student subgroups are we interested in? Let's start by looking at student
 subgroups. Here's whether a student is male.
 
-```{r}
+
+```r
 table(sea_data$male, useNA="always")
+```
+
+```
+
+    0     1  <NA> 
+59696 62882  1210 
 ```
 
 Here's a short for loop to look at one-way tabs of a lot of variables at once.
 
-```{r, eval=FALSE}
+
+```r
 for(i in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
            "gifted_7")){
   print(i)
@@ -343,7 +478,22 @@ command, we'll use the same looping syntax from above, which lets you avoid
 repetition by applying commands to multiple variables at once. You can type
 `?for` into the R console if you want to learn more about how to use loops in R.
 
-```{r, eval=FALSE}
+
+```r
+# TODO - how do you want to do these crosstabs in dplyr instead of in a table?
+# sea_data %>% group_by(coop_name_g7) %>% 
+#   count(male, name = "male_count") %>% 
+#   mutate(male = ifelse(male == 1, "m", "f")) %>%
+#   spread(male, male_count)
+# 
+# sea_data %>% group_by(coop_name_g7) %>% 
+#   count(frpl_7, name = "frpl_count") %>% 
+#   mutate(frpl_7 = paste0("frpl_", frpl_7)) %>%
+#   spread(frpl_7, frpl_count)
+
+
+
+
 for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
            "gifted_7")){
   print(var)
@@ -361,17 +511,42 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
 Now, let's look at high school outcomes. We won't examine them all, but you should.
 Here's the on-time high school graduation outcome variable we looked at above:
 
-```{r check_ontime_grad}
+
+```r
 table(sea_data$ontime_grad, useNA = "always")
+```
+
+```
+
+    0     1  <NA> 
+42701 81087     0 
 ```
 
 Wait! What if the data includes students who transferred out of state? That
 might bias the graduation rate and make it too low, because those 7th graders
 might show up as having dropped out.
 
-```{r check_grad_vars_others}
+
+```r
 table(sea_data$transferout, useNA = "always")
+```
+
+```
+
+     0      1   <NA> 
+111281  12507      0 
+```
+
+```r
 table(transfer = sea_data$transferout, grad = sea_data$ontime_grad, useNA = "always")
+```
+
+```
+        grad
+transfer     0     1  <NA>
+    0    30194 81087     0
+    1    12507     0     0
+    <NA>     0     0     0
 ```
 
 This is another case where we may want to consider a business rule. How should
@@ -384,7 +559,8 @@ Let's look at the distribution of another outcome variable, `any_grad`, which
 includes late graduation and on-time graduation by both geography and by
 subgroup.
 
-```{r crosstab_grad, eval=FALSE}
+
+```r
 round(
   prop.table(
     table(sea_data$coop_name_g7, sea_data$any_grad, useNA="always"),
@@ -402,7 +578,6 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
       margin = 1)
   )
 }
-
 ```
 
 ### Review Existing Indicator
@@ -415,8 +590,14 @@ using only the predictions it provides.
 
 First, let's check the format of the model predictions:
 
-```{r coll_ready_tab}
+
+```r
 summary(sea_data$vendor_ews_score)
+```
+
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.05032 0.89332 0.95164 0.92004 0.97805 0.99977 
 ```
 
 There are two things to notice about this vendor's prediction. First, instead of
@@ -440,12 +621,20 @@ one category, and below which they fall into the other category. A good threshol
 to try at first is 0.5. We can create a prediction on the fly and build the 
 confusion matrix using the code below:
 
-```{r conf_matrix_1}
+
+```r
 set_thresh <- 0.5
 
 conf_count <- table(observed = sea_data$ontime_grad,
       pred = sea_data$vendor_ews_score > set_thresh)
 conf_count
+```
+
+```
+        pred
+observed FALSE  TRUE
+       0    31 42670
+       1    14 81073
 ```
 
 The diagonal of the matrix tells us which classifications we made correctly. In 
@@ -469,17 +658,35 @@ review the resulting confusion matrix.
 A common approach is to set the threshold at the mean of the predicted 
 probability. 
 
-```{r}
+
+```r
 set_thresh <- mean(sea_data$vendor_ews_score)
 
 conf_count <- table(observed = sea_data$ontime_grad,
       pred = sea_data$vendor_ews_score > set_thresh)
 conf_count
+```
+
+```
+        pred
+observed FALSE  TRUE
+       0 20826 21875
+       1 20867 60220
+```
+
+```r
 # Create a proportion table and round for easier interpretation
 round( 
   prop.table(conf_count), 
     digits = 3
 )
+```
+
+```
+        pred
+observed FALSE  TRUE
+       0 0.168 0.177
+       1 0.169 0.486
 ```
 
 Doing this, we see that we identify many fewer students who graduate on-time 
@@ -492,7 +699,7 @@ to graduate on-time who do graduate on-time.
 
 All we have done is changed the our threshold for action from 0.5 to the mean 
 of the predicted probability 
-`r round(mean(sea_data$vendor_ews_score), digits = 2)`. So, we can already see 
+0.92. So, we can already see 
 that how to interpret the accuracy of our predictors depends both on what we 
 value for accuracy, and how we set our probability cutoff for our predicted 
 probability. 
@@ -507,20 +714,77 @@ and `table()` functions explore them. Here's some syntax for examining 7th grade
 math scores. You can replicate and edit it to examine other potential predictors
 and their distributions by different subgroups.
 
-```{r math_score_explore}
+
+```r
 summary(sea_data$scale_score_7_math)
+```
+
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+ -42.26   32.73   38.50   39.09   44.71  110.51    1237 
+```
+
+```r
 hist(sea_data$scale_score_7_math)
 ```
 
+<img src="../figure/pa_math_score_explore-1.png" style="display: block; margin: auto;" />
+
 A quick way to explore variables by a category is to use the `by()` function. 
 
-```{r mean_score_by_demog}
-# TODO: Consider dropping this
+
+```r
+# TODO: Replace this with a visualization
 by(sea_data$scale_score_7_math, sea_data$coop_name_g7, FUN = mean,
    na.rm = TRUE)
+```
 
+```
+sea_data$coop_name_g7: Angelea
+[1] 40.26076
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Birch
+[1] 37.51467
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Caldwell
+[1] 37.73536
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Cold Springs
+[1] 40.29902
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Hope
+[1] 40.85334
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Marvel
+[1] 38.68512
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Monarch
+[1] 36.84879
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Weston
+[1] 38.87301
+------------------------------------------------------------ 
+sea_data$coop_name_g7: Wintergreen
+[1] 40.84764
+```
+
+```r
 by(sea_data$scale_score_7_math, sea_data$frpl_7, FUN = mean,
    na.rm = TRUE)
+```
+
+```
+sea_data$frpl_7: 0
+[1] 41.40213
+------------------------------------------------------------ 
+sea_data$frpl_7: 1
+[1] 35.0435
+------------------------------------------------------------ 
+sea_data$frpl_7: 2
+[1] 34.89737
+------------------------------------------------------------ 
+sea_data$frpl_7: 9
+[1] 39.19554
 ```
 
 After exploring the predictors themselves, a good next step is to explore their 
@@ -533,13 +797,23 @@ standard deviations gives us a good sense of how different graduates and
 non-graduates are from one another on key measures. To simplify this process, 
 we can use the `effect_size_diff()` function from the `functions.R` script. 
 
-```{r comparison_of_preds}
+
+```r
 effect_size_diff(sea_data$scale_score_7_math, sea_data$ontime_grad, 
                  na.rm = TRUE)
+```
 
+```
+[1] 0.2901296
+```
+
+```r
 effect_size_diff(sea_data$pct_days_absent_7, sea_data$ontime_grad, 
                  na.rm = TRUE)
+```
 
+```
+[1] -0.003474914
 ```
 
 We can see that math scores differentiate graduates and non-graduates in these 
@@ -556,9 +830,23 @@ too many values. First, define categories (in this case, round to the nearest
 percentage) of the percent absent variable, and then truncate the variable so that
 low-frequency values are grouped together.
 
-```{r absence_categories}
+
+```r
 sea_data$pct_absent_cat <- round(sea_data$pct_days_absent_7, digits = 0)
 table(sea_data$pct_absent_cat)
+```
+
+```
+
+    0     1     2     3     4     5     6     7     8     9    10    11    12 
+62131  7311  7082  6876  6201  3000  5596  4867  4173  3533  1473  2625  2043 
+   13    14    15    16    17    18    19    20    21    22    23    24    25 
+ 1574  1199   496   748   533   372   244    77   124    66    56    30     7 
+   26    27    28    30    32    80   140 
+   11     4     4     2     1   602   120 
+```
+
+```r
 sea_data$pct_absent_cat[sea_data$pct_absenct_cat >= 30] <- 30
 ```
 
@@ -566,35 +854,52 @@ Next, define a variable which is the average on-time graduation rate for each
 absence category, and then make a scatter plot of average graduation rates by
 absence percent.
 
-```{r plot_absence_categories}
+
+```r
+# TODO - Update this plot sequence to ggplot2
 sea_data <- sea_data %>%
   group_by(pct_absent_cat) %>% # perform the operation for each value
-  mutate(abs_ontime_grad = mean(ontime_grad, na.rm = TRUE)) # add a new variable
+  mutate(abs_ontime_grad = mean(ontime_grad, na.rm = TRUE)) %>% # add a new variable
+  as.data.frame() 
 
 plot(sea_data$pct_absent_cat, sea_data$abs_ontime_grad)
 ```
 
+<img src="../figure/pa_plot_absence_categories-1.png" style="display: block; margin: auto;" />
+
 You can do the same thing for 7th grade test scores. First look at the math
 test score and notice that some scores appear to be outliers.
 
-```{r match_score_hists}
+
+```r
 hist(sea_data$scale_score_7_math)
+```
+
+<img src="../figure/pa_match_score_hists-1.png" style="display: block; margin: auto;" />
+
+```r
 sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
 hist(sea_data$scale_score_7_math)
 ```
 
+<img src="../figure/pa_match_score_hists-2.png" style="display: block; margin: auto;" />
+
 You can do the same plot as above now by modifying the `group_by()`
 command.
 
-```{r math_grad_comparison}
+
+```r
 sea_data <- sea_data %>%
   mutate(math_7_cut = ntile(scale_score_7_math, n = 100)) %>%
   group_by(math_7_cut) %>% # perform the operation for each value
-  mutate(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) # add a new variable
+  mutate(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) %>% # add a new variable
+  as.data.frame()
+  
 
 plot(sea_data$math_7_cut, sea_data$math_7_ontime_grad)
-
 ```
+
+<img src="../figure/pa_math_grad_comparison-1.png" style="display: block; margin: auto;" />
 
 This is a neat trick you can use to communicate your model predictions as well 
 which we will use again below. 
@@ -604,7 +909,8 @@ which we will use again below.
 Finally, here's some sample code you can use to look at missingness patterns in
 the data. Note we use the `is.na()` function to test whether a value is missing.
 
-```{r missingness_checks}
+
+```r
 for(var in c("coop_name_g7", "male", "race_ethnicity")){
   print(var)
   print(
@@ -612,7 +918,36 @@ for(var in c("coop_name_g7", "male", "race_ethnicity")){
                          "missing_math" = is.na(sea_data$pct_days_absent_7)), 1)
   )
 }
+```
 
+```
+[1] "coop_name_g7"
+              missing_math
+                     FALSE        TRUE
+  Angelea      0.995930048 0.004069952
+  Birch        0.995908956 0.004091044
+  Caldwell     0.995225769 0.004774231
+  Cold Springs 0.994574930 0.005425070
+  Hope         0.995328213 0.004671787
+  Marvel       0.994860842 0.005139158
+  Monarch      0.994398221 0.005601779
+  Weston       0.994274998 0.005725002
+  Wintergreen  0.995035947 0.004964053
+[1] "male"
+   missing_math
+          FALSE        TRUE
+  0 0.994773519 0.005226481
+  1 0.995372285 0.004627715
+[1] "race_ethnicity"
+           missing_math
+                  FALSE        TRUE
+  Americ... 0.994354839 0.005645161
+  Asian     0.994390244 0.005609756
+  Black ... 0.995142471 0.004857529
+  Demogr... 0.995185185 0.004814815
+  Hispan... 0.996196404 0.003803596
+  Native... 0.997729852 0.002270148
+  White     0.994804748 0.005195252
 ```
 
 Handling missing values is another case where business rules will come into play.
@@ -622,11 +957,19 @@ If so, you might want to truncate them or change them to missing. Here's how you
 can replace a numeric variable with a missing value if it is larger than a
 certain number (in this case, 100 percent).
 
-```{r abs_trunc}
+
+```r
 hist(sea_data$pct_days_absent_7)
+```
+
+<img src="../figure/pa_abs_trunc-1.png" style="display: block; margin: auto;" />
+
+```r
 sea_data$pct_days_absent_7[sea_data$pct_days_absent_7 > 100] <- NA
 hist(sea_data$pct_days_absent_7)
 ```
+
+<img src="../figure/pa_abs_trunc-2.png" style="display: block; margin: auto;" />
 
 Trimming the data in this way is another example of a business rule. You
 may wish to trim the absences even further in this data. You may also wish to
@@ -655,7 +998,8 @@ unexplained noise in the data. For logistic regressions, the predicted outcomes
 take the form of a probability ranging 0 and 1. To start with, let's do a
 regression of on-time graduation on seventh grade math scores.
 
-```{r fit_math_logit}
+
+```r
 math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
                   family = "binomial") # family tells R we want to fit a logistic
 ```
@@ -663,8 +1007,36 @@ math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
 The default summary output for logistic regression in R is not very helpful for
 predictive modeling purposes.
 
-```{r logit_summary}
+
+```r
 summary(math_model)
+```
+
+```
+
+Call:
+glm(formula = ontime_grad ~ scale_score_7_math, family = "binomial", 
+    data = sea_data)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-2.3833  -1.3617   0.8346   0.9396   1.4221  
+
+Coefficients:
+                     Estimate Std. Error z value Pr(>|z|)    
+(Intercept)        -0.5593845  0.0252679  -22.14   <2e-16 ***
+scale_score_7_math  0.0310615  0.0006426   48.34   <2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 157769  on 122433  degrees of freedom
+Residual deviance: 155302  on 122432  degrees of freedom
+  (1354 observations deleted due to missingness)
+AIC: 155306
+
+Number of Fisher Scoring iterations: 4
 ```
 
 Even before you use the predict command, you can use the logistic output to
@@ -677,8 +1049,13 @@ explanatory power of variables in a logistic model. You can use the function
 `logit_rsquared()` in the `R/functions.R` file included with this guide to
 calculate this for your model.
 
-```{r logit_rsquare}
+
+```r
 logit_rsquared(math_model)
+```
+
+```
+[1] 0.01563745
 ```
 
 ### Extend the Model
@@ -693,12 +1070,17 @@ adding polynomial terms increase the pseudo $R^{2}$? You can use the formula
 interface in R to add functional transformations of predictors without generating
 new variables and find out.
 
-```{r math_model_2}
+
+```r
 math_model2 <- glm(ontime_grad ~ scale_score_7_math +
                      I(scale_score_7_math^2) + I(scale_score_7_math^3),
                    data = sea_data,
                   family = "binomial") # family tells R we want to fit a logistic
 logit_rsquared(math_model2)
+```
+
+```
+[1] 0.01758691
 ```
 
 The model did not improve very much.  Any time you add predictors to a model,
@@ -707,26 +1089,98 @@ best to focus on including predictors that add meaningful explanatory power.
 
 Now take a look at the $R^{2}$ for the absence variable.
 
-```{r absence_model}
+
+```r
 absence_model <- glm(ontime_grad ~ pct_days_absent_7, data = sea_data,
                   family = "binomial")
 summary(absence_model)
+```
+
+```
+
+Call:
+glm(formula = ontime_grad ~ pct_days_absent_7, family = "binomial", 
+    data = sea_data)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.4602  -1.4583   0.9188   0.9196   0.9473  
+
+Coefficients:
+                    Estimate Std. Error z value Pr(>|z|)    
+(Intercept)        0.6439866  0.0066747  96.482   <2e-16 ***
+pct_days_absent_7 -0.0009416  0.0008659  -1.087    0.277    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 158586  on 123060  degrees of freedom
+Residual deviance: 158585  on 123059  degrees of freedom
+  (727 observations deleted due to missingness)
+AIC: 158589
+
+Number of Fisher Scoring iterations: 4
+```
+
+```r
 logit_rsquared(absence_model)
+```
+
+```
+[1] 7.424679e-06
 ```
 
 Let's combine our two predictors and test their combined power.
 
-```{r combo_model}
+
+```r
 combined_model <- glm(ontime_grad ~ pct_days_absent_7 + scale_score_7_math,
                       data = sea_data, family = "binomial")
 summary(combined_model)
+```
+
+```
+
+Call:
+glm(formula = ontime_grad ~ pct_days_absent_7 + scale_score_7_math, 
+    family = "binomial", data = sea_data)
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-2.3868  -1.3614   0.8344   0.9397   1.4224  
+
+Coefficients:
+                     Estimate Std. Error z value Pr(>|z|)    
+(Intercept)        -0.5601099  0.0255152 -21.952   <2e-16 ***
+pct_days_absent_7  -0.0008865  0.0008804  -1.007    0.314    
+scale_score_7_math  0.0311488  0.0006446  48.325   <2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 156860  on 121716  degrees of freedom
+Residual deviance: 154393  on 121714  degrees of freedom
+  (2071 observations deleted due to missingness)
+AIC: 154399
+
+Number of Fisher Scoring iterations: 4
+```
+
+```r
 logit_rsquared(combined_model)
+```
+
+```
+[1] 0.01572911
 ```
 
 Using this combined model, let's use the predict command to make our first
 predictions.
 
-```{r predictions}
+
+```r
 sea_data$grad_pred <- predict(combined_model, newdata = sea_data,
                    type = "response") # this tells R to give us a probability
 ```
@@ -737,8 +1191,15 @@ observations with predictions, you'll see that it is smaller than the total
 number of students. This is because R doesn't use observations that have
 missing data for any of the variables in the model.
 
-```{r tabulate_predictions}
+
+```r
 table(is.na(sea_data$grad_pred))
+```
+
+```
+
+ FALSE   TRUE 
+121717   2071 
 ```
 
 Let's convert this probability to a 0/1 indicator for whether or not a student
@@ -746,32 +1207,46 @@ is likely to graduate on-time. A good rule of thumb when starting out is to set
 the probability cutoff at the mean of the outcome variable. In this example,
 we can store this value as a variable:
 
-```{r set_threshold}
+
+```r
 basic_thresh <- mean(sea_data$ontime_grad)
 basic_thresh
+```
+
+```
+[1] 0.6550473
 ```
 
 If the probability in the model is equal to or
 greater than this threshold, we'll say the student is likely to graduate.
 
-```{r cut_grad_indicator}
+
+```r
 sea_data$grad_indicator <- ifelse(sea_data$grad_pred > basic_thresh, 1, 0)
 table(sea_data$grad_indicator, useNA = "always")
+```
+
+```
+
+    0     1  <NA> 
+61793 59924  2071 
 ```
 
 You can also plot the relationship between the probability and the outcome.
 Ideally, you should see the proportion of graduates steadily increase for each
 percentile of the probabilities. What does this relationship tell you?
 
-```{r}
+
+```r
 sea_data <- sea_data %>%
   mutate(grad_pred_cut = ntile(grad_pred, n = 100)) %>%
   group_by(grad_pred_cut) %>% # perform the operation for each value
   mutate(grad_pred_cut_grad = mean(ontime_grad, na.rm=TRUE)) # add a new variable
 
 plot(sea_data$grad_pred_cut, sea_data$grad_pred_cut_grad)
-
 ```
+
+<img src="../figure/pa_unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
 
 ### Measure Model Accuracy
 
@@ -785,12 +1260,20 @@ false positives, and the lower left corner contains false negatives. Overall, if
 you add up the cell percentages for true positives and true negatives, the model
 got 56.1 percent of the predictions right.
 
-```{r}
+
+```r
 prop.table(
   table(
     grad = sea_data$ontime_grad, 
     pred = sea_data$grad_indicator)) %>% # shorthand way to round
   round(3)
+```
+
+```
+    pred
+grad     0     1
+   0 0.207 0.138
+   1 0.301 0.354
 ```
 
 However, most of the wrong predictions are false negatives -- these are
@@ -800,20 +1283,37 @@ negatives, you can change the probability cutoff. This cutoff has a lower share
 of false positives and a higher share of false negatives, with a somewhat lower
 share of correct predictions.
 
-```{r}
+
+```r
 new_thresh <- basic_thresh - 0.05
 prop.table(table(Observed = sea_data$ontime_grad,
                  Predicted = sea_data$grad_pred > new_thresh)) %>%
   round(3)
 ```
 
+```
+        Predicted
+Observed FALSE  TRUE
+       0 0.097 0.248
+       1 0.118 0.537
+```
+
 Note that this table only includes the complete cases. To look at missing values
 as well:
 
-```{r}
+
+```r
 prop.table(table(Observed = sea_data$ontime_grad,
                  Predicted = sea_data$grad_pred > new_thresh,
                  useNA = "always")) %>% round(3)
+```
+
+```
+        Predicted
+Observed FALSE  TRUE  <NA>
+    0    0.095 0.244 0.006
+    1    0.116 0.528 0.011
+    <NA> 0.000 0.000 0.000
 ```
 
 This table tells us that of our observations that have missing data for their 
@@ -826,16 +1326,33 @@ predictive analytics system is more useful if it makes an actionable prediction
 for every student. It is good to check, if it is available, the graduation rates
 for students with missing data:
 
-```{r}
+
+```r
 table(Grad = sea_data$ontime_grad,
       miss_math = is.na(sea_data$scale_score_7_math)) %>% 
   prop.table(2) %>%  # get proportions by columns
   round(3) # round
+```
 
+```
+    miss_math
+Grad FALSE  TRUE
+   0 0.345 0.340
+   1 0.655 0.660
+```
+
+```r
 table(Grad = sea_data$ontime_grad,
       miss_abs = is.na(sea_data$pct_days_absent_7)) %>% 
   prop.table(2) %>% # get proportions by columns
   round(3) # round
+```
+
+```
+    miss_abs
+Grad FALSE  TRUE
+   0 0.345 0.326
+   1 0.655 0.674
 ```
 
 Students with missing data graduate at a slightly higher rate than students with
@@ -843,25 +1360,70 @@ full data. There are a number of options at this point. One is to run a model
 with fewer variables for only those students, and then use that model to fill in
 the missing indicators.
 
-```{r}
+
+```r
 absence_model <- glm(ontime_grad ~ pct_days_absent_7,
                      data = sea_data[is.na(sea_data$scale_score_7_math),],
                      family = "binomial")
 ```
 
-```{r}
+
+```r
 sea_data$grad_pred_2 <- predict(absence_model, newdata = sea_data,
                                   type = "response")
 summary(absence_model)
 ```
 
-```{r}
+```
+
+Call:
+glm(formula = ontime_grad ~ pct_days_absent_7, family = "binomial", 
+    data = sea_data[is.na(sea_data$scale_score_7_math), ])
+
+Deviance Residuals: 
+    Min       1Q   Median       3Q      Max  
+-1.4793  -1.4579   0.9030   0.9101   1.1779  
+
+Coefficients:
+                   Estimate Std. Error z value Pr(>|z|)    
+(Intercept)        0.686533   0.064396  10.661   <2e-16 ***
+pct_days_absent_7 -0.008597   0.008193  -1.049    0.294    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1725.8  on 1343  degrees of freedom
+Residual deviance: 1724.7  on 1342  degrees of freedom
+  (10 observations deleted due to missingness)
+AIC: 1728.7
+
+Number of Fisher Scoring iterations: 4
+```
+
+
+```r
 table(sea_data$grad_indicator, useNA="always")
+```
+
+```
+
+    0     1  <NA> 
+61793 59924  2071 
+```
+
+```r
 sea_data$grad_indicator[is.na(sea_data$grad_pred) &  
                             sea_data$grad_pred_2 < new_thresh] <- 0
 sea_data$grad_indicator[is.na(sea_data$grad_pred) &  
                             sea_data$grad_pred_2 >= new_thresh] <- 1
 table(sea_data$grad_indicator, useNA="always")
+```
+
+```
+
+    0     1  <NA> 
+61799 61262   727 
 ```
 
 We now have predictions for all but a very small share of students, and those
@@ -871,8 +1433,20 @@ future, except to develop the prediction system. We'll arbitrarily decide to
 flag them as potential non-graduates, since students with lots of missing data
 might merit some extra attention.
 
-```{r}
+
+```r
 table(sea_data$grad_indicator, sea_data$ontime_grad, useNA = "always")
+```
+
+```
+      
+           0     1  <NA>
+  0    25180 36619     0
+  1    17284 43978     0
+  <NA>   237   490     0
+```
+
+```r
 sea_data$grad_indicator[is.na(sea_data$grad_indicator)] <- 0
 ```
 
@@ -881,9 +1455,17 @@ sea_data$grad_indicator[is.na(sea_data$grad_indicator)] <- 0
 Now we have a complete set of predictions from our simple models. How well does
 the prediction system work? Can we do better?
 
-```{r}
+
+```r
 table(Observed = sea_data$ontime_grad, Predicted = sea_data$grad_indicator) %>%
   prop.table %>% round(3)
+```
+
+```
+        Predicted
+Observed     0     1
+       0 0.205 0.140
+       1 0.300 0.355
 ```
 
 A confusion matrix is one way to evaluate the success of a model and evaluate
@@ -900,35 +1482,80 @@ cost to achieve that.
 To understand this, let's first, look at row percentages instead of cell
 percentages in the confusion matrix.
 
-```{r confmatrix}
+
+```r
 table(Observed = sea_data$ontime_grad, Predicted = sea_data$grad_indicator) %>%
   prop.table(margin = 1) %>% round(3)
+```
+
+```
+        Predicted
+Observed     0     1
+       0 0.595 0.405
+       1 0.458 0.542
 ```
 
 Next, use the `roc()` function to plot the true positive rate (sensitivity in
 the graph) against the false positive rate (1-specificity in the graph).
 
-```{r calculateROC}
+
+```r
 roc(sea_data$ontime_grad, sea_data$grad_indicator) %>% plot
 ```
+
+<img src="../figure/pa_calculateROC-1.png" style="display: block; margin: auto;" />
 
 You can also calculate ROC on the continuous predictor as well, to help you
 determine the threshold:
 
 
-```{r calculateROC2}
+
+```r
 roc(sea_data$ontime_grad, sea_data$grad_pred) %>% plot
 ```
+
+<img src="../figure/pa_calculateROC2-1.png" style="display: block; margin: auto;" />
 
 You can also calculate the numeric summaries instead of just the graphs. To
 do this let's use the `caret` package:
 
-```{r}
+
+```r
 library(caret)
 # We must wrap these each in calls to factor because of how this function expects
 # the data to be formatted
 caret::confusionMatrix(factor(sea_data$grad_indicator),
                        factor(sea_data$ontime_grad), positive = "1")
+```
+
+```
+Confusion Matrix and Statistics
+
+          Reference
+Prediction     0     1
+         0 25417 37109
+         1 17284 43978
+                                          
+               Accuracy : 0.5606          
+                 95% CI : (0.5578, 0.5634)
+    No Information Rate : 0.655           
+    P-Value [Acc > NIR] : 1               
+                                          
+                  Kappa : 0.124           
+                                          
+ Mcnemar's Test P-Value : <2e-16          
+                                          
+            Sensitivity : 0.5424          
+            Specificity : 0.5952          
+         Pos Pred Value : 0.7179          
+         Neg Pred Value : 0.4065          
+             Prevalence : 0.6550          
+         Detection Rate : 0.3553          
+   Detection Prevalence : 0.4949          
+      Balanced Accuracy : 0.5688          
+                                          
+       'Positive' Class : 1               
+                                          
 ```
 
 A couple of last thoughts and notes. First, note that so far we haven't done any
@@ -941,7 +1568,8 @@ build our models and the latter two cohorts to evaluate that fit.
 
 Here is some code you can use to do that:
 
-```{r outofsamplecomparisons}
+
+```r
 # In R we can define an index of rows so we do not have to copy our data
 train_idx <- row.names(sea_data[sea_data$year %in% c(2003, 2004, 2005),])
 test_idx <- !row.names(sea_data) %in% train_idx
@@ -951,15 +1579,36 @@ fit_model <- glm(ontime_grad ~ scale_score_7_math + frpl_7,
 
 sea_data$grad_pred_3 <- predict(fit_model, newdata = sea_data, type = "response")
 summary(sea_data$grad_pred_3)
+```
+
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+ 0.2872  0.6173  0.6603  0.6594  0.7020  0.9427    1354 
+```
+
+```r
 # Check the test index only
 summary(sea_data$grad_pred_3[test_idx])
+```
 
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+ 0.2872  0.6126  0.6560  0.6559  0.6992  0.9427     652 
+```
+
+```r
 # calculate matrix of the test_index
 
 table(Observed = sea_data$ontime_grad[test_idx],
       Predicted = sea_data$grad_pred_3[test_idx] > new_thresh) %>%
   prop.table() %>% round(4)
+```
 
+```
+        Predicted
+Observed  FALSE   TRUE
+       0 0.1017 0.2520
+       1 0.1134 0.5328
 ```
 
 Second, should we use subgroup membership variables (such as demographics or
@@ -988,7 +1637,8 @@ put binary and continuous indicators on a similar scale and helps avoid
 problems associated with rounding, large numbers, and the optimization algorithms
 used to evaluate model fit. Here is an example of how you can do this in R:
 
-```{r caretdataprep}
+
+```r
 library(caret) # machine learning workhorse in R
 sea_data <- as.data.frame(sea_data)
 
@@ -1049,7 +1699,6 @@ preds <- predict(pre_proc,
                  sea_data[train_idx, # keep only the training rows
                           c(continuous_x_vars, categ_vars)]
                  ) # keep only the columns of dummy and continuous variables
-
 ```
 
 
@@ -1066,7 +1715,8 @@ use the `twoClassSummary()` model evaluation function (which tells us the area
 under the curve as well as the sensitivity, specificity, and accuracy) and
 to use repeated cross-fold validation.
 
-```{r caretmodeltrain}
+
+```r
 # Take advantage of all the processing power on your machine
 library(doFuture)
 plan(multiprocess(workers = 8)) # define the number of cpus to use
@@ -1123,17 +1773,51 @@ nb_model <- train(y = yvar[train_idx_small],
 ```
 
 
-```{r caretmodeleval}
+
+```r
 # Construct a list of model performance comparing the two models directly
 resamps <- resamples(list(RPART = rpart_model,
               NB = nb_model))
 # Summarize it
 summary(resamps)
+```
+
+```
+
+Call:
+summary.resamples(object = resamps)
+
+Models: RPART, NB 
+Number of resamples: 10 
+
+AUC 
+           Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+RPART 0.6640029 0.7197764 0.7382367 0.7351345 0.7634645 0.7884460    0
+NB    0.7790811 0.7925580 0.7961417 0.7999324 0.8112355 0.8205061    0
+
+F 
+           Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+RPART 0.7761836 0.7803174 0.7850529 0.7846857 0.7881853 0.7953008    0
+NB    0.7873825 0.7881176 0.7882371 0.7884234 0.7890145 0.7893139    0
+
+Precision 
+           Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+RPART 0.7232258 0.7279274 0.7313003 0.7327478 0.7359999 0.7457162    0
+NB    0.6499750 0.6503252 0.6508015 0.6510357 0.6515475 0.6525892    0
+
+Recall 
+           Min.  1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+RPART 0.8316679 0.837500 0.8434615 0.8446504 0.8516227 0.8623077    0
+NB    0.9976941 0.998654 0.9996157 0.9993080 1.0000000 1.0000000    0
+```
+
+```r
 # plot it
 # see ?resamples for more options
 dotplot(resamps, metric = "AUC")
-
 ```
+
+<img src="../figure/pa_caretmodeleval-1.png" style="display: block; margin: auto;" />
 
 This plot only tells us about our results on the data we have used in training. 
 We are estimating our accuracy on the cross-validated resamples on the training 
@@ -1143,7 +1827,8 @@ data.
 
 Now we need to evaluate our performance on our hold-out set of data.
 
-```{r caretmodelpredict}
+
+```r
 # We use the pre-processing we defined on the training data, but this time
 # we create test_data with these values:
 
@@ -1157,18 +1842,87 @@ test_y <- ifelse(test_y == 1, "grad", "nongrad")
 test_y <- factor(test_y)
 
 confusionMatrix(reference = test_y, data = predict(rpart_model, test_data))
+```
+
+```
+Confusion Matrix and Statistics
+
+          Reference
+Prediction  grad nongrad
+   grad    68529   22499
+   nongrad 12558   20202
+                                          
+               Accuracy : 0.7168          
+                 95% CI : (0.7143, 0.7193)
+    No Information Rate : 0.655           
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.3368          
+                                          
+ Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+            Sensitivity : 0.8451          
+            Specificity : 0.4731          
+         Pos Pred Value : 0.7528          
+         Neg Pred Value : 0.6167          
+             Prevalence : 0.6550          
+         Detection Rate : 0.5536          
+   Detection Prevalence : 0.7354          
+      Balanced Accuracy : 0.6591          
+                                          
+       'Positive' Class : grad            
+                                          
+```
+
+```r
 # Note that making predictions from the nb classifier can take a long time
 # consider alternative models or making fewer predictions if this is a bottleneck
 confusionMatrix(reference = test_y, data = predict(nb_model, test_data))
 ```
 
+```
+Confusion Matrix and Statistics
+
+          Reference
+Prediction  grad nongrad
+   grad    81016   42420
+   nongrad    71     281
+                                          
+               Accuracy : 0.6567          
+                 95% CI : (0.6541, 0.6594)
+    No Information Rate : 0.655           
+    P-Value [Acc > NIR] : 0.1051          
+                                          
+                  Kappa : 0.0075          
+                                          
+ Mcnemar's Test P-Value : <2e-16          
+                                          
+            Sensitivity : 0.999124        
+            Specificity : 0.006581        
+         Pos Pred Value : 0.656340        
+         Neg Pred Value : 0.798295        
+             Prevalence : 0.655047        
+         Detection Rate : 0.654474        
+   Detection Prevalence : 0.997156        
+      Balanced Accuracy : 0.502853        
+                                          
+       'Positive' Class : grad            
+                                          
+```
+
 We can also make ROC plots of our test-set, out of sample, prediction accuracy.
 
-```{r outofsampleROC}
+
+```r
 # ROC plots
 yhat <- predict(rpart_model, test_data, type = "prob")
 yhat <- yhat$grad
 roc(response = test_y, predictor = yhat <- yhat) %>% plot
+```
+
+<img src="../figure/pa_outofsampleROC-1.png" style="display: block; margin: auto;" />
+
+```r
 # NB ROC plot
 # Note that making predictions from the nb classifier can take a long time
 # consider alternative models or making fewer predictions if this is a bottleneck
@@ -1176,6 +1930,8 @@ yhat <- predict(nb_model, test_data, type = "prob")
 yhat <- yhat$grad
 roc(response = test_y, predictor = yhat <- yhat) %>% plot
 ```
+
+<img src="../figure/pa_outofsampleROC-2.png" style="display: block; margin: auto;" />
 
 
 ## References and More
@@ -1192,7 +1948,8 @@ Here is a block of code that will allow you to make predictions on new data. To
 do this we need to identify our model object and read in our new data for
 current students. Then we simply make predictions. This is called model scoring.
 
-```{r}
+
+```r
 load("../data/montucky_current.rda")
 
 current_data$frpl_7 <- factor(current_data$frpl_7)
@@ -1218,6 +1975,46 @@ current_data <- bind_cols(current_data,
 str(current_data)
 ```
 
+```
+'data.frame':	34321 obs. of  36 variables:
+ $ sid                 : chr  "0001" "0004" "0005" "0019" ...
+ $ sch_g7_code         : chr  "01-01" "01-07" "01-07" "01-08" ...
+ $ year                : num  2018 2018 2018 2018 2018 ...
+ $ grade               : chr  "7" "7" "7" "7" ...
+ $ scale_score_7_math  : num  30.9 35.4 40.8 40.3 42.8 ...
+ $ scale_score_7_read  : num  32.4 40.8 33.6 46.9 25.6 ...
+ $ age                 : num  12 12 12 12 12 12 12 12 12 12 ...
+ $ frpl_7              : Factor w/ 4 levels "0","1","2","9": 2 2 1 1 2 3 1 1 1 1 ...
+ $ ell_7               : num  0 0 0 0 0 0 0 0 0 0 ...
+ $ iep_7               : num  0 0 0 0 0 1 0 1 0 0 ...
+ $ gifted_7            : num  0 0 0 0 1 1 0 0 0 0 ...
+ $ cohort_year         : num  2008 2008 2008 2008 2008 ...
+ $ pct_days_absent_7   : num  0 0 0 0 8.89 ...
+ $ male                : Factor w/ 2 levels "0","1": 2 1 1 1 NA 2 2 2 1 1 ...
+ $ race_ethnicity      : chr  "White" "Hispan..." "Hispan..." "Hispan..." ...
+ $ any_grad            : logi  NA NA NA NA NA NA ...
+ $ disappeared         : logi  NA NA NA NA NA NA ...
+ $ dropout             : logi  NA NA NA NA NA NA ...
+ $ early_grad          : logi  NA NA NA NA NA NA ...
+ $ late_grad           : logi  NA NA NA NA NA NA ...
+ $ ontime_grad         : logi  NA NA NA NA NA NA ...
+ $ still_enrolled      : logi  NA NA NA NA NA NA ...
+ $ transferout         : logi  NA NA NA NA NA NA ...
+ $ sch_g7_name         : chr  "Pike" "London Lane" "London Lane" "Highland" ...
+ $ sch_g7_enroll       : num  17 241 241 16 2331 ...
+ $ sch_g7_male_per     : num  0.585 0.468 0.468 0.504 0.605 ...
+ $ sch_g7_frpl_per     : num  0.458 0.586 0.586 0.765 0.911 ...
+ $ sch_g7_lep_per      : num  0 0.0192 0.0192 0.3213 0 ...
+ $ sch_g7_gifted_per   : num  0.067 0.136 0.136 0.223 0 ...
+ $ sch_g7_lea_id       : chr  "01" "01" "01" "01" ...
+ $ sch_g7_poverty_desig: chr  "LowQuartile" "HighQuartile" "HighQuartile" "LowQuartile" ...
+ $ vendor_ews_score    : logi  NA NA NA NA NA NA ...
+ $ sch_g7_lea_name     : Factor w/ 45 levels "Allen","Beebe",..: 22 22 22 22 22 22 22 22 22 22 ...
+ $ coop_name_g7        : chr  "Township" "Township" "Township" "Township" ...
+ $ preds_nb            : num  0.899 0.847 0.945 0.982 0.921 ...
+ $ preds_rpart         : num  0.622 0.373 0.729 0.676 0.78 ...
+```
+
 ## Advanced Techniques
 
 Predictive analytic techniques are constantly being refined and evolving. This 
@@ -1238,7 +2035,8 @@ two groups.
 
 
 
-```{r}
+
+```r
 ########################################################################
 # Build and plot a regression tree
 ########################################################################
@@ -1256,7 +2054,11 @@ binary.model <- rpart(ontime_grad ~ scale_score_7_math +
 # Pass the model object to the plot function
 # You can look at ?rpart.plot to identify customizations you wish to use
 rpart.plot(binary.model)
+```
 
+<img src="../figure/pa_unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+
+```r
 # To improve the labels, you can rename the variables in the data
 sea_data$short_race_label <- NA
 sea_data$short_race_label[sea_data$race_ethnicity == "Hispan..."] <- "H"
@@ -1279,6 +2081,8 @@ binary.model <- rpart(ontime_grad ~ scale_score_7_math +
 rpart.plot(binary.model)
 ```
 
+<img src="../figure/pa_unnamed-chunk-17-2.png" style="display: block; margin: auto;" />
+
 ### Variable Importance
 
 Another important diagnostic tool is understanding what variables/predictors are 
@@ -1293,7 +2097,8 @@ for the predictors in the model.
 We can also plot these values in a graph and inspect it visually. 
 
 
-```{r}
+
+```r
 ########################################################################
 ## Variable importance from a caret/train model object
 ########################################################################
@@ -1324,16 +2129,43 @@ caret_mod <- train(ontime_grad ~ .,
 
 # Get variable importance, not available for all methods
 caret::varImp(caret_mod)
+```
 
+```
+rpart variable importance
+
+                           Overall
+sch_g7_gifted_per         100.0000
+sch_g7_lep_per             80.3568
+race_ethnicityWhite        75.1759
+scale_score_7_math         54.6073
+race_ethnicityHispan...    44.9445
+frpl_71                    41.8397
+race_ethnicityAsian        33.2768
+iep_7                       8.0599
+race_ethnicityNative...     0.6088
+frpl_72                     0.3048
+male1                       0.0000
+pct_days_absent_7           0.0000
+race_ethnicityDemogr...     0.0000
+frpl_79                     0.0000
+ell_7                       0.0000
+`race_ethnicityBlack ...`   0.0000
+```
+
+```r
 # Plot variable importance
 plot(caret::varImp(caret_mod))
 ```
+
+<img src="../figure/pa_unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
 
 ### Probability Trade offs
 
 Another 
 
-```{r tidyrocplots}
+
+```r
 ########################################################################
 ## Probablity accuracy
 ## Plot the relationship between predicted probabilities and observed
@@ -1361,11 +2193,41 @@ estimates_tbl <- data.frame(
 # compute a variety of performanc emetrics
 ## Confusion matrix
 estimates_tbl %>% yardstick::conf_mat(truth, estimate)
+```
+
+```
+          Truth
+Prediction  Grad Nongrad
+   Grad    72587   30396
+   Nongrad  5595   10746
+```
+
+```r
 # Accuracy
 estimates_tbl %>% yardstick::metrics(truth, estimate)
+```
+
+```
+# A tibble: 2 x 3
+  .metric  .estimator .estimate
+  <chr>    <chr>          <dbl>
+1 accuracy binary         0.698
+2 kap      binary         0.221
+```
+
+```r
 # AUC
 estimates_tbl %>% yardstick::roc_auc(truth, class_prob)
+```
 
+```
+# A tibble: 1 x 3
+  .metric .estimator .estimate
+  <chr>   <chr>          <dbl>
+1 roc_auc binary         0.638
+```
+
+```r
 # ROC graph
 # Plots the ROC curve (the ROC at all possible threshold values for the
 # probability cutoff)
@@ -1375,11 +2237,14 @@ estimates_tbl %>%
   autoplot()
 ```
 
+<img src="../figure/pa_tidyrocplots-1.png" style="display: block; margin: auto;" />
+
 Another way to look at an individual estimated threshold is to graphically 
 depict the confusion matrix using a mosaic plot (a visual crosstab). This code 
 will help you do that:
 
-```{r plotconfusionmatrix}
+
+```r
 # Save the confusion matrix as an R object
 conf_mat <- estimates_tbl %>% yardstick::conf_mat(truth, estimate)
 
@@ -1390,6 +2255,8 @@ labs <- round(prop.table(conf_mat$table), 2)
 mosaic(conf_mat$table, pop=FALSE)
 labeling_cells(text = labs, margin = 0)(conf_mat$table)
 ```
+
+<img src="../figure/pa_plotconfusionmatrix-1.png" style="display: block; margin: auto;" />
 
 ### Probability vs. Outcome Plot
 
@@ -1402,7 +2269,8 @@ classification rates of true positives and true negatives. This is a feature tha
 is dependent on the algorithm you use and how it was tuned, so investigating this 
 behavior is a good post-predictive check. 
 
-```{r probvsoutcomeplot}
+
+```r
 ################################################################################
 ## Probability vs. outcome plot for predicted probabilities
 ################################################################################
@@ -1425,8 +2293,9 @@ ggplot(plotdf, aes(x = avg_prob, y = prob_grad)) +
   ggalt::geom_lollipop() + theme_classic() +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand=FALSE) +
   geom_smooth(se=FALSE)
-
 ```
+
+<img src="../figure/pa_probvsoutcomeplot-1.png" style="display: block; margin: auto;" />
 
 ### Make a Bowers Plot
 
@@ -1439,7 +2308,8 @@ the performance of our model to benchmark against previous studies. TO do this
 we need the data from Bowers et. al. and a data frame of 
 
 
-```{r}
+
+```r
 ################################################################################
 ## Advanced: Make a Bowers plot
 #################################################################################
@@ -1449,9 +2319,12 @@ bowers_plot() +
            x = 1 - pull(estimates_tbl %>% yardstick::spec(truth, estimate)),
            y = pull(estimates_tbl %>% yardstick::sens(truth, estimate)),
            size = 5, color = "red")
+```
 
+<img src="../figure/pa_unnamed-chunk-19-1.png" style="display: block; margin: auto;" />
+
+```r
 # Use a custom probability threshold
-
 ```
 
 ### About the Analyses

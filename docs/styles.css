@@ -1,0 +1,41 @@
+.affix {
+   position: static;
+ }
+ @media (min-width: 992px) {
+    #toc.affix {
+		top: inherit;
+		width: inherit;
+		position: fixed;
+    }
+}
+
+a {
+  color: #a41c30;
+}
+
+a:focus, a:hover {
+  color: #6D121F;
+}
+
+#toc {
+	width: 100%;
+	text-align: left;
+	max-height: 100%;
+	overflow-y: scroll;
+	background-color: #a41c30;
+}
+#logo{
+	 background: #a41c30;
+}
+body { 
+	padding-top: 115px; 
+	overflow: visible;
+}
+html {
+	overflow: visible;
+}
+
+.list-group-item.active {
+  background-color: #a41c30;
+  border-color: #a41c30;
+}
