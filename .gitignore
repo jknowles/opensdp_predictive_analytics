@@ -1,2 +1,5 @@
 .Rproj.user
+figure
+cache
+.Rdata
 .Rhistory
