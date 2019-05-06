@@ -194,6 +194,7 @@ source("../R/functions.R")
 
 load("../data/montucky.rda")
 ```
+
 ## Explore the Data
 
 ### Uniqueness
@@ -795,6 +796,11 @@ plot(sea_data$grad_pred_cut, sea_data$grad_pred_cut_grad)
 ```
 
 ### Measure Model Accuracy
+
+Using an indicator like $R^{2}$ only tells us how the model fits the data. Fit 
+to the data does not tell us what we'd really like to know for our model - how 
+well will it predict future data. This is what we mean when we discuss model 
+accuracy. 
 
 Lets evaluate the accuracy of the model by comparing the predictions to the
 actual graduation outcomes for the students for whom we have predictions. This
@@ -1468,7 +1474,6 @@ bowers_plot() +
            size = 5, color = "red")
 
 # Use a custom probability threshold
-
 ```
 
 ### About the Analyses

@@ -1,5 +1,11 @@
 TODO:
 
+5/6/2019
+
+- Split into two guides (evaluating PA, building models)
+- Update R code in both guides
+- Publish
+
 12/19/2018
 
 - Incorporate text from Dashiell and credit Dashiell for contributions
