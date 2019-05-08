@@ -143,6 +143,14 @@ enough. You'll need to use decision rules based on good data exploration and
 your best judgment to predict and fill in outcomes for students where you have
 insufficient data.
 
+Along the way we'll introduce some key skills: 
+
+- Iterating through variables using `for` loops
+- Writing convenience functions as shortcuts to common tasks
+- Making and interpreting confusion matrices
+- Evaluating model prediction performance graphically (using `ggplot2`)
+
+
 ## Getting Started
 
 If you're using the `Rmd` file version of these materials, start by saving a new
@@ -171,17 +179,15 @@ has the necessary add-on packages and that you can read in the training data.
 # Install add-on packages needed
 install.packages("dplyr") # this will update your installed version to align with
 install.packages("pROC") # those in the tutorial
-install.packages("devtools")
 install.packages("caret") # for machine learning
-install.packages("future") # for multicore processing on Windows/Mac/Linux
+install.packages("ggplot2") # for plotting
 ```
 
 ```{r loadWorkspace}
 # Load the packages you need
 library(dplyr)
 library(pROC)
-library(devtools)
-library(future)
+library(ggplot2)
 
 # Load the helper functions not in packages
 source("../R/functions.R")
@@ -347,42 +353,18 @@ repetition by applying commands to multiple variables at once. You can type
 `?for` into the R console if you want to learn more about how to use loops in R.
 
 ```{r, eval=FALSE}
-
-# TODO - how do you want to do these crosstabs in dplyr instead of in a table?
-# sea_data %>% group_by(coop_name_g7) %>% 
-#   count(male, name = "male_count") %>% 
-#   mutate(male = ifelse(male == 1, "m", "f")) %>%
-#   spread(male, male_count)
-# 
-# sea_data %>% group_by(coop_name_g7) %>% 
-#   count(frpl_7, name = "frpl_count") %>% 
-#   mutate(frpl_7 = paste0("frpl_", frpl_7)) %>%
-#   spread(frpl_7, frpl_count)
-
-# http://analyticswithr.com/contingencytables.html
-
-
-for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
-           "gifted_7")){
-    var_enq <- rlang::sym(var)
-sea_data %>%
-    group_by(coop_name_g7, !!var_enq) %>%
-  summarize(n=n()) %>% 
-  mutate(per = round(n / sum(n), 2)) %>%
-  kable() %>% print
-}
-
 for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
            "gifted_7")){
   print(var)
-  print( # have to call print inside a loop
-    round( # round the result
-      prop.table( # convert table to percentages
-        table(sea_data$coop_name_g7, sea_data[, var],  # build the table
-                           useNA = "always"),
-        margin = 1), # calculate percentages by column, change to 1 for row
-      digits = 3) # round off at 3 digits
-    *100 ) # put on percentage instead of proportion scale
+  comparison_table <- table(sea_data$coop_name_g7, sea_data[, var], 
+                            useNA = "always")
+  comparison_table <- prop.table(comparison_table, 
+                                 margin = 1) # convert table to row proportions use 2 for column
+  print( # Have to print in a for loop
+    round(
+      comparison_table*100, digits = 3 # round the results
+    )
+  )
 }
 ```
 
@@ -413,22 +395,19 @@ includes late graduation and on-time graduation by both geography and by
 subgroup.
 
 ```{r crosstab_grad, eval=FALSE}
-round(
-  prop.table(
-    table(sea_data$coop_name_g7, sea_data$any_grad, useNA="always"),
-      margin = 1
-    ),
-  digits = 2)
+# Let's look at another, more compact way of writing our loop over variables
+sum_table <- table("Co-Op" = sea_data$coop_name_g7, 
+          "any_grad" = sea_data$any_grad, useNA="always")
+round(prop.table(sum_table, margin = 1)*100, digits = 2)
+
 
 for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
            "gifted_7")){
   print(var)
-  print(
-    prop.table(
-      table(grad = sea_data$any_grad, var = sea_data[, var],
-            useNA = "always"),
-      margin = 1)
-  )
+  sum_table <- table(var = sea_data[, var], 
+          "any_grad" = sea_data$any_grad, useNA="always")
+  sum_table <- prop.table(sum_table, margin = 1)
+  print(round(sum_table * 100, digits = 2))
 }
 
 ```
@@ -504,10 +483,7 @@ conf_count <- table(observed = sea_data$ontime_grad,
       pred = sea_data$vendor_ews_score > set_thresh)
 conf_count
 # Create a proportion table and round for easier interpretation
-round( 
-  prop.table(conf_count), 
-    digits = 3
-)
+round(prop.table(conf_count), digits = 3)
 ```
 
 Doing this, we see that we identify many fewer students who graduate on-time 
@@ -537,7 +513,9 @@ and their distributions by different subgroups.
 
 ```{r math_score_explore}
 summary(sea_data$scale_score_7_math)
-hist(sea_data$scale_score_7_math)
+
+ggplot(sea_data) + aes(x = scale_score_7_math) + 
+  geom_histogram(bins = 120) + theme_bw()
 ```
 
 A quick way to explore variables by a category is to use the `by()` function. 
@@ -559,13 +537,17 @@ and non-graduates. We can standardize this difference using the standard deviati
 a measure that is known as an effect size. Comparing differences in terms of 
 standard deviations gives us a good sense of how different graduates and 
 non-graduates are from one another on key measures. To simplify this process, 
-we can use the `effect_size_diff()` function from the `functions.R` script. 
+we can use the `effect_size_diff()` function from the `functions.R` script. Just 
+pass two variables to this function - the first one you want to compare, and the 
+second defining the groups you want to compare by.
 
 ```{r comparison_of_preds}
-effect_size_diff(sea_data$scale_score_7_math, sea_data$ontime_grad, 
+effect_size_diff(x = sea_data$scale_score_7_math, 
+                 group_idx = sea_data$ontime_grad, 
                  na.rm = TRUE)
 
-effect_size_diff(sea_data$pct_days_absent_7, sea_data$ontime_grad, 
+effect_size_diff(x = sea_data$pct_days_absent_7, 
+                 group_idx = sea_data$ontime_grad, 
                  na.rm = TRUE)
 
 ```
@@ -592,39 +574,46 @@ sea_data$pct_absent_cat[sea_data$pct_absenct_cat >= 30] <- 30
 
 Next, define a variable which is the average on-time graduation rate for each
 absence category, and then make a scatter plot of average graduation rates by
-absence percent.
+absence percent. As in previous guides, we'll use `ggplot` to make our graphs.
 
 ```{r plot_absence_categories}
-# TODO - Update this plot sequence to ggplot2
-sea_data <- sea_data %>%
+plotdf <- sea_data %>%
   group_by(pct_absent_cat) %>% # perform the operation for each value
-  mutate(abs_ontime_grad = mean(ontime_grad, na.rm = TRUE)) %>% # add a new variable
+  summarize(abs_ontime_grad = mean(ontime_grad, na.rm = TRUE)) %>% # add a new variable
   as.data.frame() 
 
-plot(sea_data$pct_absent_cat, sea_data$abs_ontime_grad)
+ggplot(plotdf, aes(x = pct_absent_cat, y = abs_ontime_grad)) + 
+  geom_point() + theme_bw()
+
 ```
 
 You can do the same thing for 7th grade test scores. First look at the math
-test score and notice that some scores appear to be outliers.
+test score and notice that some scores appear to be outliers. Let's correct 
+math score values less than 0. 
 
 ```{r match_score_hists}
-hist(sea_data$scale_score_7_math)
+ggplot(sea_data) + aes(scale_score_7_math) +
+  geom_histogram(bins = 100) + theme_bw()
 sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
-hist(sea_data$scale_score_7_math)
+ggplot(sea_data) + aes(scale_score_7_math) +
+  geom_histogram(bins = 100) + theme_bw()
 ```
 
 You can do the same plot as above now by modifying the `group_by()`
 command.
 
 ```{r math_grad_comparison}
-sea_data <- sea_data %>%
+plotdf <- sea_data %>%
   mutate(math_7_cut = ntile(scale_score_7_math, n = 100)) %>%
   group_by(math_7_cut) %>% # perform the operation for each value
-  mutate(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) %>% # add a new variable
+  summarize(math_7_ontime_grad = mean(ontime_grad, na.rm=TRUE)) %>% # add a new variable
   as.data.frame()
   
+ggplot(plotdf) + aes(x = math_7_cut, y = math_7_ontime_grad) + 
+  geom_point() + 
+  theme_bw()
 
-plot(sea_data$math_7_cut, sea_data$math_7_ontime_grad)
+
 
 ```
 
@@ -639,10 +628,10 @@ the data. Note we use the `is.na()` function to test whether a value is missing.
 ```{r missingness_checks}
 for(var in c("coop_name_g7", "male", "race_ethnicity")){
   print(var)
-  print(
-  prop.table(table(sea_data[, var],
-                         "missing_math" = is.na(sea_data$pct_days_absent_7)), 1)
-  )
+  sum_table <- table(sea_data[, var], 
+                     "missing_math" = is.na(sea_data$pct_days_absent_7))
+  sum_table <- prop.table(sum_table, 1)
+  print(round(sum_table, digits = 3))
 }
 
 ```
@@ -655,16 +644,17 @@ can replace a numeric variable with a missing value if it is larger than a
 certain number (in this case, 100 percent).
 
 ```{r abs_trunc}
-hist(sea_data$pct_days_absent_7)
+ggplot(sea_data) + aes(x = pct_days_absent_7) + 
+  geom_histogram(bins = 100) + theme_bw()
 sea_data$pct_days_absent_7[sea_data$pct_days_absent_7 > 100] <- NA
-hist(sea_data$pct_days_absent_7)
+ggplot(sea_data) + aes(x = pct_days_absent_7) + 
+  geom_histogram(bins = 100) + theme_bw()
 ```
 
 Trimming the data in this way is another example of a business rule. You
 may wish to trim the absences even further in this data. You may also wish to
 assign a different value other than missing for unusual values - such as the
 mean or median value.
-
 
 ## Model
 
@@ -676,7 +666,26 @@ that fits the relationship between the predictor variables and the outcome. A
 regression model won't be able to explain all of the variation in an outcome
 variable--any variation that is left over is treated as unexplained noise in the
 data, or error, even if there are additional variables not in the model which
-could explain more of the variation.
+could explain more of the variation. Note that R will drop any rows in the data 
+with a missing value in either the outcome or the key predictor - so it's a good 
+idea to analyze the missingness patterns in your data to know what to expect: 
+
+```{r}
+# Count NAs
+sum(is.na(sea_data$ontime_grad))
+sum(is.na(sea_data$scale_score_7_math))
+```
+
+Fitting a logistic regression is a matter of passing a formula and a dataset to 
+the R `glm()` function. Using a formula, we define our dependent variable / outcome on the 
+left hand side of the formula (to the left of `~`), and our predictors are specified on 
+the right hand side. Note that when writing formulas we do not have to put our variable 
+names in quotations. 
+
+```{r fit_math_logit}
+math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
+                  family = "binomial") # family tells R we want to fit a logistic
+```
 
 ### Baseline Model
 
@@ -687,11 +696,6 @@ unexplained noise in the data. For logistic regressions, the predicted outcomes
 take the form of a probability ranging 0 and 1. To start with, let's do a
 regression of on-time graduation on seventh grade math scores.
 
-```{r fit_math_logit}
-# TODO - explain missing data handling here? # 1354 observations are deleted
-math_model <- glm(ontime_grad ~ scale_score_7_math, data = sea_data,
-                  family = "binomial") # family tells R we want to fit a logistic
-```
 
 The default summary output for logistic regression in R is not very helpful for
 predictive modeling purposes.
@@ -722,23 +726,29 @@ our prediction of student graduation.
 
 One place to start is to consider that the relationship between math scores and
 graduation may not be linear. We can evaluate this by looking at whether or not
-adding polynomial terms increase the pseudo $R^{2}$? You can use the formula
-interface in R to add functional transformations of predictors without generating
-new variables and find out.
+adding polynomial terms increase the pseudo $R^{2}$? 
+
+You can use the formula interface in R to add transformations of 
+predictors without generating new variables and find out. In a formula, additive 
+predictors are connected together by the `+` sign. To create polynomial terms, 
+use the `I()`function to make the polynomial term in place - e.g. `I(scale_score_7_math^2)` 
+is equivalent to creating a new variable - the square of `scale_score_7_math`. 
 
 ```{r math_model_2}
 math_model2 <- glm(ontime_grad ~ scale_score_7_math +
-                     I(scale_score_7_math^2) + I(scale_score_7_math^3),
+                     I(scale_score_7_math^2) + 
+                     I(scale_score_7_math^3),
                    data = sea_data,
                   family = "binomial") # family tells R we want to fit a logistic
 logit_rsquared(math_model2)
 ```
 
-The model did not improve very much.  Any time you add predictors to a model,
-the $R^{2}$ will increase, even if the variables are fairly meaningless, so it's
-best to focus on including predictors that add meaningful explanatory power.
+The model did not improve very much by adding the polynomial terms. Any time 
+you add predictors to a model, the $R^{2}$ will increase, even if the variables 
+are fairly meaningless, so it's best to focus on including predictors that add 
+meaningful explanatory power.
 
-Now take a look at the $R^{2}$ for the absence variable.
+Now take a look at the $R^{2}$ for a model with the absence variable.
 
 ```{r absence_model}
 absence_model <- glm(ontime_grad ~ pct_days_absent_7, data = sea_data,
@@ -746,6 +756,9 @@ absence_model <- glm(ontime_grad ~ pct_days_absent_7, data = sea_data,
 summary(absence_model)
 logit_rsquared(absence_model)
 ```
+
+Notice two things - first our model does not fit the data very well! Second, this model 
+has fewer observations deleted due to missingness. 
 
 Let's combine our two predictors and test their combined power.
 
@@ -768,7 +781,10 @@ This generates a new variable with the probability of on-time high school
 graduation, according to the model. But if you look at the number of
 observations with predictions, you'll see that it is smaller than the total
 number of students. This is because R doesn't use observations that have
-missing data for any of the variables in the model.
+missing data for any of the variables in the data. This is important to keep 
+in mind when we are making predictions - if we want to handle missing data 
+we have to do it in the data before we start applying model predictions 
+to it. 
 
 ```{r tabulate_predictions}
 table(is.na(sea_data$grad_pred))
@@ -797,12 +813,15 @@ Ideally, you should see the proportion of graduates steadily increase for each
 percentile of the probabilities. What does this relationship tell you?
 
 ```{r}
-sea_data <- sea_data %>%
+plotdf <- sea_data %>%
   mutate(grad_pred_cut = ntile(grad_pred, n = 100)) %>%
   group_by(grad_pred_cut) %>% # perform the operation for each value
-  mutate(grad_pred_cut_grad = mean(ontime_grad, na.rm=TRUE)) # add a new variable
+  summarize(grad_pred_cut_grad = mean(ontime_grad, na.rm=TRUE)) # add a new variable
 
-plot(sea_data$grad_pred_cut, sea_data$grad_pred_cut_grad)
+ggplot(plotdf) + aes(x = grad_pred_cut, y = grad_pred_cut_grad) + 
+  geom_point() + 
+  theme_bw() 
+
 
 ```
 
@@ -823,12 +842,19 @@ false positives, and the lower left corner contains false negatives. Overall, if
 you add up the cell percentages for true positives and true negatives, the model
 got 56.1 percent of the predictions right.
 
+We will be making *a lot* of confusion matrices, so let's make a short function to 
+make our job easier. This has the benefit of showing you how to write functions 
+to avoid repetitious code for tasks you do a lot:
+
 ```{r}
-prop.table(
-  table(
-    grad = sea_data$ontime_grad, 
-    pred = sea_data$grad_indicator)) %>% # shorthand way to round
-  round(3)
+conf_table <- function(observed, predicted, useNA = "no") { # give the function a name, and define the parameters
+  # setting a parameter value = to something in the definition defines its default
+  sum_table <- table(observed = observed, predicted = predicted, useNA = useNA)
+  sum_table <- prop.table(sum_table)
+  round(sum_table, 3)
+  }
+
+conf_table(sea_data$ontime_grad, sea_data$grad_indicator)
 ```
 
 However, most of the wrong predictions are false negatives -- these are
@@ -838,20 +864,19 @@ negatives, you can change the probability cutoff. This cutoff has a lower share
 of false positives and a higher share of false negatives, with a somewhat lower
 share of correct predictions.
 
+Using our new function `conf_table()` we can quickly look at the confusion matrix 
+for different thresholds of the predicted probabiliy. 
+
 ```{r}
 new_thresh <- basic_thresh - 0.05
-prop.table(table(Observed = sea_data$ontime_grad,
-                 Predicted = sea_data$grad_pred > new_thresh)) %>%
-  round(3)
+conf_table(sea_data$ontime_grad, sea_data$grad_pred > new_thresh)
 ```
 
 Note that this table only includes the complete cases. To look at missing values
 as well:
 
 ```{r}
-prop.table(table(Observed = sea_data$ontime_grad,
-                 Predicted = sea_data$grad_pred > new_thresh,
-                 useNA = "always")) %>% round(3)
+conf_table(sea_data$ontime_grad, sea_data$grad_pred > new_thresh, useNA = "always")
 ```
 
 This table tells us that of our observations that have missing data for their 
@@ -859,12 +884,13 @@ predictors, more of them graduate than don't.
 
 ## Missing Data
 
-Another key business rule is how we will handle students with missing data. A
+Another key business rule is how we will handle those students with missing data. A
 predictive analytics system is more useful if it makes an actionable prediction
 for every student. It is good to check, if it is available, the graduation rates
 for students with missing data:
 
 ```{r}
+# TODO - rewrite these 
 table(Grad = sea_data$ontime_grad,
       miss_math = is.na(sea_data$scale_score_7_math)) %>% 
   prop.table(2) %>%  # get proportions by columns
@@ -920,8 +946,7 @@ Now we have a complete set of predictions from our simple models. How well does
 the prediction system work? Can we do better?
 
 ```{r}
-table(Observed = sea_data$ontime_grad, Predicted = sea_data$grad_indicator) %>%
-  prop.table %>% round(3)
+conf_table(sea_data$ontime_grad, sea_data$grad_indicator)
 ```
 
 A confusion matrix is one way to evaluate the success of a model and evaluate
@@ -969,13 +994,12 @@ caret::confusionMatrix(factor(sea_data$grad_indicator),
                        factor(sea_data$ontime_grad), positive = "1")
 ```
 
-A couple of last thoughts and notes. First, note that so far we haven't done any
-out-of-sample testing. We know from the pre-reading that we should never trust
-our model fit measures on data the model was fit to -- statistical models are
-overly confident. To combat this, you should subdivide your data set. There are
-many strategies you can choose from depending on how much data you have and the
-nature of your problem - for the EWS case, we can use the first two cohorts to
-build our models and the latter two cohorts to evaluate that fit.
+A couple of last thoughts and notes. First, note that so far we haven't done any out-of-sample
+testing. We should never trust our model fit measures on data the model was fit to -- statistical
+models are overly confident. To combat this, you should subdivide your data set. There are many
+strategies you can choose from depending on how much data you have and the nature of your problem -
+for the EWS case, we can use the first two cohorts to build our models and the latter two cohorts to
+evaluate that fit.
 
 Here is some code you can use to do that:
 
@@ -1005,7 +1029,6 @@ school of enrollment?) to make predictions, if they improve the accuracy of
 predictions? This is more a policy question than a technical question, and you
 should consider it when you are developing your models. You'll also want to
 check to see how accurate your model is for different subgroups.
-
 
 The above code will be more than enough to get you started. But, if you want
 to reach further into predictive analytics, the next section provides some bonus
