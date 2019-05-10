@@ -17,7 +17,7 @@ output:
       in_header: zz-sdp_ga.html
 ---
 
-# Predictive Analytics in Education
+# Predictive Analytics in Education: Evaluating and Comparing Models
 
 <div class="navbar navbar-default navbar-fixed-top" id="logo">
 <div class="container">

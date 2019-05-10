@@ -17,13 +17,14 @@ output:
       in_header: zz-sdp_ga.html
 ---
 
-# Predictive Analytics in Education
+# Predictive Analytics in Education: Building Models
 
 <div class="navbar navbar-default navbar-fixed-top" id="logo">
 <div class="container">
 <img src="https://opensdp.github.io/assets/images/OpenSDP-Banner_crimson.jpg" style="display: block; margin: 0 auto; height: 115px;">
 </div>
 </div>
+
 
 
 ```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
@@ -37,6 +38,24 @@ knitr::opts_chunk$set(comment = NA, warning = FALSE, echo = TRUE,
                       cache.path = "../cache/pa_2")
 options(width = 80)
 ```
+
+### Objective
+
+After completing this guide, the user will be able to fit and test a range 
+of statistical models for predicting education outcomes. You will also be 
+able to make predictions on future data and communicate the model fit and 
+tradeoffs of models with stakeholders. 
+
+### Using this Guide
+
+This guide uses synthetic data created by the OpenSDP synthetic data engine.
+The data reflects student-level attainment data and is organized to be similar 
+to the level of detail available at a state education agency - with a single 
+row representing a student-grade-year. This guide does not cover the steps 
+needed to clean raw student data. If you are interested in how to assemble 
+data like this or the procedure used to generate the data, the code used 
+is included in the data subdirectory. 
+
 
 ## Getting Started
 
@@ -61,6 +80,9 @@ a codebook available in the data sub-directory.
 
 To prepare for this project you will need to ensure that your R installation
 has the necessary add-on packages and that you can read in the training data.
+This guide also includes some custom functions you can use to make your work 
+easier - these are read in from the `functions.R` file in the `R` directory. 
+For details on these functions - look there. 
 
 ```{r installPackages, eval=FALSE}
 # Install add-on packages needed
@@ -89,27 +111,7 @@ source("../R/functions.R")
 # environment, or the setwd() command.
 
 load("../data/montucky.rda")
-```
-
-
-
-## Beyond Logistic Regression
-
-
-Logistic regression is where you should start. It is fast to compute, easier to
-interpret, and usually does a great job. However, there are a number of alternative
-algorithms available to you and R provides a common interface to them through the
-`caret` package. The `train` function (as in, training the models) is the
-workhorse of the `caret` package. It has an extensive set of user-controlled
-options.
-
-When switching away from logistic regression, it can be advantageous to transform
-predictors to be centered at 0 with a standard deviation of 1. This helps
-put binary and continuous indicators on a similar scale and helps avoid
-problems associated with rounding, large numbers, and the optimization algorithms
-used to evaluate model fit. Here is an example of how you can do this in R:
-
-```{r}
+sea_data <- as.data.frame(sea_data) # make sure the data is a data frame
 # RESUME PREPPING DATA FROM GUIDE 1
 sea_data$sid <- paste(sea_data$sid, sea_data$sch_g7_lea_id, sep = "-")
 sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
@@ -117,13 +119,52 @@ sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
 
 
 
-```{r caretdataprep}
-library(caret) # machine learning workhorse in R
-sea_data <- as.data.frame(sea_data)
+## Beyond Logistic Regression
 
-# To use caret we have to manually expand our categorical variables. caret
-# can use formulas like lm() or glm() but becomes very slow and unreliable
-# for some model/algorithm methods when doing so. Better to do it ourselves.
+In the last guide we ended up with a logistic regression model with several predictors.
+Logistic regression is where you should start. It is fast to compute, easier to
+interpret, and usually does a great job. However, there are a number of alternative
+algorithms available to you and R provides a common interface to them through the
+`caret` package. The `train` function (as in, training the models) is the
+workhorse of the `caret` package. It has an extensive set of user-controlled
+options.
+
+Moving away from logistic regression comes with some additional complexity. While 
+logistic regression is robust and stable to predictors on a wide variety of 
+scales and is inexpensive to compute - other algorithms may not have all of 
+these advantages, even when they are more accurate. So there are additional 
+data preparation steps we should take. 
+
+1. Build the model matrix
+2. Divide the data into training and test sets
+3. Scale and center predictors
+
+The order of these operations is important. We want to avoid information from 
+our test set of data being incorporated into our training data. This is 
+called "information leakage" and it will lead us to be overly confident 
+in strength of our model and to ultimately select the wrong model. 
+
+### Build the Model Matrix
+
+When we fit the logistic regression model we used R's formula interface to specify our model and let
+R handle the process of turning our data into a matrix suitable for model estimation. When fitting
+models using caret, it is a good practie to create the model matrix on our own. We do this for three
+reasons - first, not all of the algorithms accessible via the `caret::train()` function work with
+the formula interface. Having a model matrix allows us to take full advantage of the suite of models
+`caret()` can access (and models outside of that as well such as `keras` models). Second, the matrix
+approach is more memory efficient and avoids costly data transformation operations during the
+fitting of models - a particularly important concern when dealing with datasets with many rows
+and/or predictors. Third, it provides us a good opportunity to check our data again and identify
+potential model building issues such as extremely sparse factor categories, duplicated variables, or
+perfectly collinear predictors.
+
+One workflow for doing this is the annotated R code below, which uses the data preparation functions 
+built into the `caret` package to help build model matrices that can be applied to training and 
+test data together.
+
+
+```{r modelmatrix}
+library(caret) # machine learning workhorse in R
 
 # Expand categorical variables
 # First declare any variable we want to be treated as a category as a factor
@@ -144,16 +185,32 @@ categ_vars <- colnames(fact_vars)
 sea_data <- cbind(sea_data, fact_vars)
 # Drop the matrix of dummy variables
 rm(fact_vars)
-
 # Define the numeric/continuous predictors we want to use
 continuous_x_vars <- c('scale_score_7_math', 'scale_score_7_read',
                           'pct_days_absent_7', 'sch_g7_frpl_per')
+```
 
-# caret does not gracefully handle missing data, so we have to do some additional
-# work when we define our training/test data split. You can choose additional
-# ways to address missing data (imputation, substituting mean values, etc.) -
-# here we opt for the simple but aggressive strategy of excluding any row
-# with missing values for any predictor from being in the training data
+### Training / Test Data
+
+Now we need to define our training and test data split. There are a number of ways you can split 
+your data to estimate your out-of-sample model accuracy, but here we will opt for a temporal split 
+where we fit the model to the earliest years of data in our model and hold out the most recent 
+year in our data for "testing" the model fit. 
+
+#### Missingness
+
+The caret package does not automatically handle missing data, so we have to do some additional work
+when we define our training/test data split. You can choose additional ways to address missing data
+(imputation, substituting mean values, etc.) - here we opt for the simple but aggressive strategy of
+excluding any row with missing values for any predictor from being in the training data. 
+
+#### Outliers
+
+This is not directly covered here, but you will also want to ensure outliers are dropped from your 
+training data at this stage (if not earlier). 
+
+
+```{r split}
 
 train_idx <- row.names( # get the row.names to define our index
   na.omit(sea_data[sea_data$year %in% c(2003, 2004, 2005),
@@ -163,10 +220,24 @@ train_idx <- row.names( # get the row.names to define our index
 )
 test_idx <- !row.names(sea_data[sea_data$year > 2005,]) %in% train_idx
 
-# All of our algorithms will run much faster and more smoothly if we center
-# our continuous measures at 0 with a standard deviation of 1. We have
-# skipped the important step of identifying and removing outliers, which we
-# should make sure to do, but is left up to you!
+```
+
+### Scale and Center Predictors
+
+The reason we scale and center our continuouse predictors last is that scaling and centering the
+data is - in a way - fitting a model to the data. We do not want information from the test set to
+carry over to the training set - which it would if we scaled and centered the entire dataset
+together. So we get the scaling and centering parameters on the training set, and we then apply 
+those parameters to both the training and the test data. 
+
+When switching away from logistic regression, it is important to transform predictors to be centered
+at 0 with a standard deviation of 1. This helps put binary and continuous indicators on a similar
+scale and helps avoid problems associated with rounding, large numbers, and the optimization
+algorithms used to evaluate model fit. Here is an example of how you can do this in R:
+
+
+```{r scaleandcenter}
+# Fit the data transformation model to the continuous variables in our data
 pre_proc <- caret::preProcess(sea_data[train_idx, continuous_x_vars],
                        method = c("scale", "center"))
 
@@ -181,43 +252,47 @@ preds <- predict(pre_proc,
 
 ```
 
+Once we have defined our predictor variables, we need to tell `train` how we want to test our
+models. Most of the algorithms offered through `caret` have "tuning parameters", user-controlled
+values, that are not estimated from the data. Our goal is to experiment with these values and find
+the values that fit the data the best. To do this, we must tell `train` which values to try, and how
+to evaluate their performance.
 
-Once we have defined our predictor variables, we need to tell `train` how we want
-to test our models. Most of the algorithms offered through `caret` have "tuning
-parameters", user-controlled values, that are not estimated from the data. Our
-goal is to experiment with these values and find the values that fit the data
-the best. To do this, we must tell `train` which values to try, and how to
-evaluate their performance.
+Luckily, `train()` has a number of sensible defaults that largely automate this process for us. For
+the purpose of this exercise, a good set of defaults is to use the `twoClassSummary()` model
+evaluation function (which tells us the area under the curve as well as the sensitivity,
+specificity, and accuracy) and to use cross-fold validation. To set up our model training run 
+we need to make three final steps:
 
-Luckily, `train()` has a number of sensible defaults that largely automate this
-process for us. For the purpose of this exercise, a good set of defaults is to
-use the `twoClassSummary()` model evaluation function (which tells us the area
-under the curve as well as the sensitivity, specificity, and accuracy) and
-to use repeated cross-fold validation.
+1. Set up R to use the computing resources on our machine
 
-```{r caretmodeltrain}
+
+```{r setupparallel}
 # Take advantage of all the processing power on your machine
 library(doFuture)
 plan(multiprocess(workers = 4)) # define the number of cpus to use
 registerDoFuture() # register them with R
+```
 
-# Caret really really really likes if you do binary classification that you
-# code the variables as factors with alphabetical labels. In this case, we
-# recode 0/1 to be nongrad, grad.
+2. Prep our outcome variable
 
+Caret really really really likes if you do binary classification that you
+code the variables as factors with alphabetical labels. In this case, we
+recode 0/1 to be nongrad, grad.
+
+
+```{r defineoutcome}
 yvar <- sea_data[train_idx, "ontime_grad"] # save only training observations
 yvar <- ifelse(yvar == 1, "grad", "nongrad")
 yvar <- factor(yvar)
+```
 
-# On a standard desktop/laptop it can be necessary to decrease the sample size
-# to train in a reasonable amount of time. For the prototype and getting feedback
-# it's a good idea to stick with a reasonable sample size of under 20,000 rows.
-# Let's do that here:
+3. Set up our model test parameters
 
-train_idx_small <- sample(1:nrow(preds), 2e4)
+Caret has a number of complex options, you can read about under `?trainControl`. 
+Here we set some sensible defaults
 
-# Caret has a number of complex options, you can read about under ?trainControl
-# Here we set some sensible defaults
+```{r definemodeltestparameter}
 example_control <- trainControl(
   method = "cv", # we cross-validate our model to avoid overfitting
   classProbs = TRUE,  # we want to be able to predict probabilities, not just binary outcomes
@@ -229,8 +304,26 @@ example_control <- trainControl(
   allowParallel = TRUE # we want to use all the processors on our computer if possible
   )
 
+# On a standard desktop/laptop it can be necessary to decrease the sample size
+# to train in a reasonable amount of time. For the prototype and getting feedback
+# it's a good idea to stick with a reasonable sample size of under 20,000 rows.
+# Let's do that here:
+
+train_idx_small <- sample(1:nrow(preds), 2e4)
+```
+
+And then we are ready to fit our model to the data:
+
+For the most part this is similar to fitting a model via `lm()` - we assign the model fit an object 
+name and call `train()`. The distribution of parameters between `train()` and those we specified 
+above in the `trControl()` object. The key parameters to `train()` are given below with comments 
+explaining how each of them works. 
+
+```{r caretfit}
 # This will take quite some time:
 set.seed(2532) # set seed so models are comparable
+
+#
 rpart_model <- train(
   y = yvar[train_idx_small], # specify the outcome, here subset
   # to the smaller number of observations
@@ -241,8 +334,12 @@ rpart_model <- train(
    metric = "ROC" # select the metric to choose the best model based on
   )
 
+```
 
-set.seed(2532)
+To fit a second model it's as easy as changing the `method` argument to caret and specifying a 
+new method. 
+
+```{r caretfit2}
 # Repeat above but just change the `method` argument to GBM for gradient boosted machines
 gbm_model <- train(y = yvar[train_idx_small],
              x = preds[train_idx_small,],
@@ -251,6 +348,18 @@ gbm_model <- train(y = yvar[train_idx_small],
              metric = "ROC")
 ```
 
+#### Look at Our Models
+
+```{r}
+print(rpart_model)
+print(gbm_model)
+```
+
+
+## Model Comparison
+
+Our next step is to compare our two models. One quick way to do this is to compare the prediction 
+performance of each of the models across all of the folds.
 
 ```{r caretmodeleval}
 # Construct a list of model performance comparing the two models directly
