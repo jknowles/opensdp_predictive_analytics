@@ -40,7 +40,7 @@ to the level of detail available at a state education agency - with a single
 row representing a student-grade-year. This guide does not cover the steps 
 needed to clean raw student data. If you are interested in how to assemble 
 data like this or the procedure used to generate the data, the code used 
-is included in the data subdirectory. 
+is included in the data sub-directory. 
 
 
 ```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
@@ -294,9 +294,8 @@ What does this rule say? How is it different than the definition of on-time abov
 
 ### Structure and Geography
 
-Now that we have a sense of the time structure of the data, let's look at
-geography. How many high schools and how many districts are? What are those
-regional education services coops?
+Now that we have a sense of the time structure of the data, let's look at geography. How many high
+schools and how many districts are there? What are regional education services coops?
 
 We are going to be building a model for the an entire state, but stakeholders
 may have questions about how the model works for particular schools, districts,
@@ -388,7 +387,15 @@ This is another case where we may want to consider a business rule. How should
 students who transfer out be treated? We don't know whether they graduated
 or not. Should they be excluded from the analysis? Coded as not completing?
 The decision is yours, but it is important to consider all the possible high
-school outcomes when building a model and how the model will treat them.
+school outcomes when building a model and how the model will treat them. Currently the data 
+treats all transfer as not graduating, but it seems unlikely that every student who 
+transferred out of the state did not graduate. If you want to remove them from the data, 
+you can do that now: 
+
+```{r transferbizrule}
+# Removing transferout students because none of them are listed as graduating
+sea_data <- sea_data[sea_data$transferout != 1, ]
+```
 
 Let's look at the distribution of another outcome variable, `any_grad`, which
 includes late graduation and on-time graduation by both geography and by
@@ -412,7 +419,7 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
 
 ```
 
-### Review Existing Indicator
+## Review Existing Indicator
 
 Model comparison is central to developing good predictive models. The data set
 for this guide comes with predictions from a fictitious vendor, which as an
@@ -441,11 +448,19 @@ make those predictions and how accurate such predictions may be.
 A standard way to interpret the accuracy of predictive models that are classifying 
 cases into two categories is called a confusion matrix. This allows us to 
 compare a binary prediction (will graduate, will not graduate) to the an 
-observed binary outcome (did graduate, did not graduate). To use this technique 
-we select a probability threshold, above which observations are classified in 
-one category, and below which they fall into the other category. A good threshold 
-to try at first is 0.5. We can create a prediction on the fly and build the 
-confusion matrix using the code below:
+observed binary outcome (did graduate, did not graduate). Many model performance metrics are 
+calculated based on the values of the cells in a confusion matrix. This figure shows a 
+confusion matrix and a sampling of the performance metrics that can be calculated from it. [^1]
+
+[^1]: Figure adapted from Knowles 2015. 
+
+
+![](../img/Knowles_JEDM_conf_matrix.PNG)
+
+
+To use this technique we select a probability threshold, above which observations are classified in
+one category, and below which they fall into the other category. A good threshold to try at first is
+0.5. We can create a prediction on the fly and build the confusion matrix using the code below:
 
 ```{r conf_matrix_1}
 set_thresh <- 0.5
@@ -676,7 +691,7 @@ sum(is.na(sea_data$ontime_grad))
 sum(is.na(sea_data$scale_score_7_math))
 ```
 
-Fitting a logistic regression is a matter of passing a formula and a dataset to 
+Fitting a logistic regression is a matter of passing a formula and a data set to 
 the R `glm()` function. Using a formula, we define our dependent variable / outcome on the 
 left hand side of the formula (to the left of `~`), and our predictors are specified on 
 the right hand side. Note that when writing formulas we do not have to put our variable 
@@ -865,7 +880,7 @@ of false positives and a higher share of false negatives, with a somewhat lower
 share of correct predictions.
 
 Using our new function `conf_table()` we can quickly look at the confusion matrix 
-for different thresholds of the predicted probabiliy. 
+for different thresholds of the predicted probability. 
 
 ```{r}
 new_thresh <- basic_thresh - 0.05
@@ -1043,6 +1058,6 @@ syntax and advice for building more complex statistical models.
 
 ### Giving Feedback on this Guide
 
-This guide is an open-source document hosted on Github and generated using R
+This guide is an open-source document hosted on GitHub and generated using R
 Markdown. We welcome feedback, corrections, additions, and updates. Please visit
 the OpenSDP equity metrics repository to read our contributor guidelines.

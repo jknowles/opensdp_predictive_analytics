@@ -17,7 +17,7 @@ output:
       in_header: zz-sdp_ga.html
 ---
 
-# Predictive Analytics in Education
+# Predictive Analytics in Education: Evaluating and Comparing Models
 
 <div class="navbar navbar-default navbar-fixed-top" id="logo">
 <div class="container">
@@ -40,7 +40,7 @@ to the level of detail available at a state education agency - with a single
 row representing a student-grade-year. This guide does not cover the steps 
 needed to clean raw student data. If you are interested in how to assemble 
 data like this or the procedure used to generate the data, the code used 
-is included in the data subdirectory. 
+is included in the data sub-directory. 
 
 
 
@@ -362,9 +362,8 @@ What does this rule say? How is it different than the definition of on-time abov
 
 ### Structure and Geography
 
-Now that we have a sense of the time structure of the data, let's look at
-geography. How many high schools and how many districts are? What are those
-regional education services coops?
+Now that we have a sense of the time structure of the data, let's look at geography. How many high
+schools and how many districts are there? What are regional education services coops?
 
 We are going to be building a model for the an entire state, but stakeholders
 may have questions about how the model works for particular schools, districts,
@@ -547,7 +546,16 @@ This is another case where we may want to consider a business rule. How should
 students who transfer out be treated? We don't know whether they graduated
 or not. Should they be excluded from the analysis? Coded as not completing?
 The decision is yours, but it is important to consider all the possible high
-school outcomes when building a model and how the model will treat them.
+school outcomes when building a model and how the model will treat them. Currently the data 
+treats all transfer as not graduating, but it seems unlikely that every student who 
+transferred out of the state did not graduate. If you want to remove them from the data, 
+you can do that now: 
+
+
+```r
+# Removing transferout students because none of them are listed as graduating
+sea_data <- sea_data[sea_data$transferout != 1, ]
+```
 
 Let's look at the distribution of another outcome variable, `any_grad`, which
 includes late graduation and on-time graduation by both geography and by
@@ -571,7 +579,7 @@ for(var in c("male", "race_ethnicity", "frpl_7", "iep_7", "ell_7",
 }
 ```
 
-### Review Existing Indicator
+## Review Existing Indicator
 
 Model comparison is central to developing good predictive models. The data set
 for this guide comes with predictions from a fictitious vendor, which as an
@@ -588,7 +596,7 @@ summary(sea_data$vendor_ews_score)
 
 ```
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-0.05032 0.89332 0.95164 0.92004 0.97805 0.99977 
+0.05032 0.89954 0.95420 0.92371 0.97878 0.99977 
 ```
 
 There are two things to notice about this vendor's prediction. First, instead of
@@ -606,11 +614,19 @@ make those predictions and how accurate such predictions may be.
 A standard way to interpret the accuracy of predictive models that are classifying 
 cases into two categories is called a confusion matrix. This allows us to 
 compare a binary prediction (will graduate, will not graduate) to the an 
-observed binary outcome (did graduate, did not graduate). To use this technique 
-we select a probability threshold, above which observations are classified in 
-one category, and below which they fall into the other category. A good threshold 
-to try at first is 0.5. We can create a prediction on the fly and build the 
-confusion matrix using the code below:
+observed binary outcome (did graduate, did not graduate). Many model performance metrics are 
+calculated based on the values of the cells in a confusion matrix. This figure shows a 
+confusion matrix and a sampling of the performance metrics that can be calculated from it. [^1]
+
+[^1]: Figure adapted from Knowles 2015. 
+
+
+![](../img/Knowles_JEDM_conf_matrix.PNG)
+
+
+To use this technique we select a probability threshold, above which observations are classified in
+one category, and below which they fall into the other category. A good threshold to try at first is
+0.5. We can create a prediction on the fly and build the confusion matrix using the code below:
 
 
 ```r
@@ -624,7 +640,7 @@ conf_count
 ```
         pred
 observed FALSE  TRUE
-       0    31 42670
+       0    25 30169
        1    14 81073
 ```
 
@@ -661,8 +677,8 @@ conf_count
 ```
         pred
 observed FALSE  TRUE
-       0 20826 21875
-       1 20867 60220
+       0 15044 15150
+       1 22085 59002
 ```
 
 ```r
@@ -673,8 +689,8 @@ round(prop.table(conf_count), digits = 3)
 ```
         pred
 observed FALSE  TRUE
-       0 0.168 0.177
-       1 0.169 0.486
+       0 0.135 0.136
+       1 0.198 0.530
 ```
 
 Doing this, we see that we identify many fewer students who graduate on-time 
@@ -709,7 +725,7 @@ summary(sea_data$scale_score_7_math)
 
 ```
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
- -42.26   32.73   38.50   39.09   44.71  110.51    1237 
+ -42.26   32.95   38.74   39.31   44.97  110.51    1114 
 ```
 
 ```r
@@ -730,31 +746,31 @@ by(sea_data$scale_score_7_math, sea_data$coop_name_g7, FUN = mean,
 
 ```
 sea_data$coop_name_g7: Angelea
-[1] 40.26076
+[1] 40.47475
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Birch
-[1] 37.51467
+[1] 37.68879
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Caldwell
-[1] 37.73536
+[1] 37.89083
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Cold Springs
-[1] 40.29902
+[1] 40.50751
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Hope
-[1] 40.85334
+[1] 41.20777
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Marvel
-[1] 38.68512
+[1] 38.90086
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Monarch
-[1] 36.84879
+[1] 37.1288
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Weston
-[1] 38.87301
+[1] 39.2037
 ------------------------------------------------------------ 
 sea_data$coop_name_g7: Wintergreen
-[1] 40.84764
+[1] 41.05899
 ```
 
 ```r
@@ -764,16 +780,16 @@ by(sea_data$scale_score_7_math, sea_data$frpl_7, FUN = mean,
 
 ```
 sea_data$frpl_7: 0
-[1] 41.40213
+[1] 41.52592
 ------------------------------------------------------------ 
 sea_data$frpl_7: 1
-[1] 35.0435
+[1] 35.24369
 ------------------------------------------------------------ 
 sea_data$frpl_7: 2
-[1] 34.89737
+[1] 35.09814
 ------------------------------------------------------------ 
 sea_data$frpl_7: 9
-[1] 39.19554
+[1] 39.41288
 ```
 
 After exploring the predictors themselves, a good next step is to explore their 
@@ -796,7 +812,7 @@ effect_size_diff(x = sea_data$scale_score_7_math,
 ```
 
 ```
-[1] 0.2901296
+[1] 0.2852349
 ```
 
 ```r
@@ -806,7 +822,7 @@ effect_size_diff(x = sea_data$pct_days_absent_7,
 ```
 
 ```
-[1] -0.003474914
+[1] 0.002529943
 ```
 
 We can see that math scores differentiate graduates and non-graduates in these 
@@ -832,11 +848,11 @@ table(sea_data$pct_absent_cat)
 ```
 
     0     1     2     3     4     5     6     7     8     9    10    11    12 
-62131  7311  7082  6876  6201  3000  5596  4867  4173  3533  1473  2625  2043 
+55967  6609  6323  6196  5599  2690  5007  4356  3755  3142  1306  2352  1817 
    13    14    15    16    17    18    19    20    21    22    23    24    25 
- 1574  1199   496   748   533   372   244    77   124    66    56    30     7 
-   26    27    28    30    32    80   140 
-   11     4     4     2     1   602   120 
+ 1407  1063   438   675   488   339   219    69   112    59    49    28     6 
+   26    27    28    30    80   140 
+   10     4     3     2   538   106 
 ```
 
 ```r
@@ -927,7 +943,7 @@ for(var in c("coop_name_g7", "male", "race_ethnicity")){
   Cold Springs 0.995 0.005
   Hope         0.995 0.005
   Marvel       0.995 0.005
-  Monarch      0.994 0.006
+  Monarch      0.995 0.005
   Weston       0.994 0.006
   Wintergreen  0.995 0.005
 [1] "male"
@@ -938,10 +954,10 @@ for(var in c("coop_name_g7", "male", "race_ethnicity")){
 [1] "race_ethnicity"
            missing_math
             FALSE  TRUE
-  Americ... 0.994 0.006
+  Americ... 0.995 0.005
   Asian     0.994 0.006
   Black ... 0.995 0.005
-  Demogr... 0.995 0.005
+  Demogr... 0.994 0.006
   Hispan... 0.996 0.004
   Native... 0.998 0.002
   White     0.995 0.005
@@ -1004,10 +1020,10 @@ sum(is.na(sea_data$scale_score_7_math))
 ```
 
 ```
-[1] 1354
+[1] 1224
 ```
 
-Fitting a logistic regression is a matter of passing a formula and a dataset to 
+Fitting a logistic regression is a matter of passing a formula and a data set to 
 the R `glm()` function. Using a formula, we define our dependent variable / outcome on the 
 left hand side of the formula (to the left of `~`), and our predictors are specified on 
 the right hand side. Note that when writing formulas we do not have to put our variable 
@@ -1045,21 +1061,21 @@ glm(formula = ontime_grad ~ scale_score_7_math, family = "binomial",
 
 Deviance Residuals: 
     Min       1Q   Median       3Q      Max  
--2.3833  -1.3617   0.8346   0.9396   1.4221  
+-2.5012  -1.4323   0.7421   0.8229   1.2587  
 
 Coefficients:
                      Estimate Std. Error z value Pr(>|z|)    
-(Intercept)        -0.5593845  0.0252679  -22.14   <2e-16 ***
-scale_score_7_math  0.0310615  0.0006426   48.34   <2e-16 ***
+(Intercept)        -0.1894346  0.0282468  -6.706 1.99e-11 ***
+scale_score_7_math  0.0304418  0.0007211  42.218  < 2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 (Dispersion parameter for binomial family taken to be 1)
 
-    Null deviance: 157769  on 122433  degrees of freedom
-Residual deviance: 155302  on 122432  degrees of freedom
-  (1354 observations deleted due to missingness)
-AIC: 155306
+    Null deviance: 128678  on 110056  degrees of freedom
+Residual deviance: 126802  on 110055  degrees of freedom
+  (1224 observations deleted due to missingness)
+AIC: 126806
 
 Number of Fisher Scoring iterations: 4
 ```
@@ -1080,7 +1096,7 @@ logit_rsquared(math_model)
 ```
 
 ```
-[1] 0.01563745
+[1] 0.01457646
 ```
 
 ### Extend the Model
@@ -1110,7 +1126,7 @@ logit_rsquared(math_model2)
 ```
 
 ```
-[1] 0.01758691
+[1] 0.01628188
 ```
 
 The model did not improve very much by adding the polynomial terms. Any time 
@@ -1135,21 +1151,21 @@ glm(formula = ontime_grad ~ pct_days_absent_7, family = "binomial",
 
 Deviance Residuals: 
     Min       1Q   Median       3Q      Max  
--1.4602  -1.4583   0.9188   0.9196   0.9473  
+-1.6152  -1.6142   0.7956   0.7959   0.8011  
 
 Coefficients:
                     Estimate Std. Error z value Pr(>|z|)    
-(Intercept)        0.6439866  0.0066747  96.482   <2e-16 ***
-pct_days_absent_7 -0.0009416  0.0008659  -1.087    0.277    
+(Intercept)        0.9878997  0.0075256 131.271   <2e-16 ***
+pct_days_absent_7 -0.0001989  0.0009828  -0.202     0.84    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 (Dispersion parameter for binomial family taken to be 1)
 
-    Null deviance: 158586  on 123060  degrees of freedom
-Residual deviance: 158585  on 123059  degrees of freedom
-  (727 observations deleted due to missingness)
-AIC: 158589
+    Null deviance: 129369  on 110627  degrees of freedom
+Residual deviance: 129369  on 110626  degrees of freedom
+  (653 observations deleted due to missingness)
+AIC: 129373
 
 Number of Fisher Scoring iterations: 4
 ```
@@ -1159,7 +1175,7 @@ logit_rsquared(absence_model)
 ```
 
 ```
-[1] 7.424679e-06
+[1] 3.159952e-07
 ```
 
 Notice two things - first our model does not fit the data very well! Second, this model 
@@ -1182,22 +1198,22 @@ glm(formula = ontime_grad ~ pct_days_absent_7 + scale_score_7_math,
 
 Deviance Residuals: 
     Min       1Q   Median       3Q      Max  
--2.3868  -1.3614   0.8344   0.9397   1.4224  
+-2.5032  -1.4318   0.7421   0.8232   1.2600  
 
 Coefficients:
                      Estimate Std. Error z value Pr(>|z|)    
-(Intercept)        -0.5601099  0.0255152 -21.952   <2e-16 ***
-pct_days_absent_7  -0.0008865  0.0008804  -1.007    0.314    
-scale_score_7_math  0.0311488  0.0006446  48.325   <2e-16 ***
+(Intercept)        -0.1924587  0.0285257  -6.747 1.51e-11 ***
+pct_days_absent_7  -0.0001396  0.0009976  -0.140    0.889    
+scale_score_7_math  0.0305185  0.0007232  42.197  < 2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 (Dispersion parameter for binomial family taken to be 1)
 
-    Null deviance: 156860  on 121716  degrees of freedom
-Residual deviance: 154393  on 121714  degrees of freedom
-  (2071 observations deleted due to missingness)
-AIC: 154399
+    Null deviance: 127951  on 109413  degrees of freedom
+Residual deviance: 126077  on 109411  degrees of freedom
+  (1867 observations deleted due to missingness)
+AIC: 126083
 
 Number of Fisher Scoring iterations: 4
 ```
@@ -1207,7 +1223,7 @@ logit_rsquared(combined_model)
 ```
 
 ```
-[1] 0.01572911
+[1] 0.01464841
 ```
 
 Using this combined model, let's use the predict command to make our first
@@ -1236,7 +1252,7 @@ table(is.na(sea_data$grad_pred))
 ```
 
  FALSE   TRUE 
-121717   2071 
+109414   1867 
 ```
 
 Let's convert this probability to a 0/1 indicator for whether or not a student
@@ -1251,7 +1267,7 @@ basic_thresh
 ```
 
 ```
-[1] 0.6550473
+[1] 0.7286689
 ```
 
 If the probability in the model is equal to or
@@ -1266,7 +1282,7 @@ table(sea_data$grad_indicator, useNA = "always")
 ```
 
     0     1  <NA> 
-61793 59924  2071 
+54422 54992  1867 
 ```
 
 You can also plot the relationship between the probability and the outcome.
@@ -1323,8 +1339,8 @@ conf_table(sea_data$ontime_grad, sea_data$grad_indicator)
 ```
         predicted
 observed     0     1
-       0 0.207 0.138
-       1 0.301 0.354
+       0 0.162 0.110
+       1 0.336 0.393
 ```
 
 However, most of the wrong predictions are false negatives -- these are
@@ -1335,7 +1351,7 @@ of false positives and a higher share of false negatives, with a somewhat lower
 share of correct predictions.
 
 Using our new function `conf_table()` we can quickly look at the confusion matrix 
-for different thresholds of the predicted probabiliy. 
+for different thresholds of the predicted probability. 
 
 
 ```r
@@ -1346,8 +1362,8 @@ conf_table(sea_data$ontime_grad, sea_data$grad_pred > new_thresh)
 ```
         predicted
 observed FALSE  TRUE
-       0 0.097 0.248
-       1 0.118 0.537
+       0 0.066 0.206
+       1 0.111 0.617
 ```
 
 Note that this table only includes the complete cases. To look at missing values
@@ -1361,8 +1377,8 @@ conf_table(sea_data$ontime_grad, sea_data$grad_pred > new_thresh, useNA = "alway
 ```
         predicted
 observed FALSE  TRUE  <NA>
-    0    0.095 0.244 0.006
-    1    0.116 0.528 0.011
+    0    0.065 0.202 0.004
+    1    0.109 0.607 0.012
     <NA> 0.000 0.000 0.000
 ```
 
@@ -1388,8 +1404,8 @@ table(Grad = sea_data$ontime_grad,
 ```
     miss_math
 Grad FALSE  TRUE
-   0 0.345 0.340
-   1 0.655 0.660
+   0 0.271 0.270
+   1 0.729 0.730
 ```
 
 ```r
@@ -1402,8 +1418,8 @@ table(Grad = sea_data$ontime_grad,
 ```
     miss_abs
 Grad FALSE  TRUE
-   0 0.345 0.326
-   1 0.655 0.674
+   0 0.271 0.250
+   1 0.729 0.750
 ```
 
 Students with missing data graduate at a slightly higher rate than students with
@@ -1433,21 +1449,21 @@ glm(formula = ontime_grad ~ pct_days_absent_7, family = "binomial",
 
 Deviance Residuals: 
     Min       1Q   Median       3Q      Max  
--1.4793  -1.4579   0.9030   0.9101   1.1779  
+-1.6279  -1.5856   0.7861   0.7933   1.0120  
 
 Coefficients:
                    Estimate Std. Error z value Pr(>|z|)    
-(Intercept)        0.686533   0.064396  10.661   <2e-16 ***
-pct_days_absent_7 -0.008597   0.008193  -1.049    0.294    
+(Intercept)        1.016110   0.072294  14.055   <2e-16 ***
+pct_days_absent_7 -0.007672   0.009202  -0.834    0.404    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 (Dispersion parameter for binomial family taken to be 1)
 
-    Null deviance: 1725.8  on 1343  degrees of freedom
-Residual deviance: 1724.7  on 1342  degrees of freedom
+    Null deviance: 1418.6  on 1213  degrees of freedom
+Residual deviance: 1417.9  on 1212  degrees of freedom
   (10 observations deleted due to missingness)
-AIC: 1728.7
+AIC: 1421.9
 
 Number of Fisher Scoring iterations: 4
 ```
@@ -1460,7 +1476,7 @@ table(sea_data$grad_indicator, useNA="always")
 ```
 
     0     1  <NA> 
-61793 59924  2071 
+54422 54992  1867 
 ```
 
 ```r
@@ -1474,7 +1490,7 @@ table(sea_data$grad_indicator, useNA="always")
 ```
 
     0     1  <NA> 
-61799 61262   727 
+54427 56201   653 
 ```
 
 We now have predictions for all but a very small share of students, and those
@@ -1492,9 +1508,9 @@ table(sea_data$grad_indicator, sea_data$ontime_grad, useNA = "always")
 ```
       
            0     1  <NA>
-  0    25180 36619     0
-  1    17284 43978     0
-  <NA>   237   490     0
+  0    17702 36725     0
+  1    12329 43872     0
+  <NA>   163   490     0
 ```
 
 ```r
@@ -1514,8 +1530,8 @@ conf_table(sea_data$ontime_grad, sea_data$grad_indicator)
 ```
         predicted
 observed     0     1
-       0 0.205 0.140
-       1 0.300 0.355
+       0 0.161 0.111
+       1 0.334 0.394
 ```
 
 A confusion matrix is one way to evaluate the success of a model and evaluate
@@ -1541,8 +1557,8 @@ table(Observed = sea_data$ontime_grad, Predicted = sea_data$grad_indicator) %>%
 ```
         Predicted
 Observed     0     1
-       0 0.595 0.405
-       1 0.458 0.542
+       0 0.592 0.408
+       1 0.459 0.541
 ```
 
 Next, use the `roc()` function to plot the true positive rate (sensitivity in
@@ -1583,26 +1599,26 @@ Confusion Matrix and Statistics
 
           Reference
 Prediction     0     1
-         0 25417 37109
-         1 17284 43978
+         0 17865 37215
+         1 12329 43872
                                           
-               Accuracy : 0.5606          
-                 95% CI : (0.5578, 0.5634)
-    No Information Rate : 0.655           
+               Accuracy : 0.5548          
+                 95% CI : (0.5519, 0.5577)
+    No Information Rate : 0.7287          
     P-Value [Acc > NIR] : 1               
                                           
-                  Kappa : 0.124           
+                  Kappa : 0.1054          
                                           
  Mcnemar's Test P-Value : <2e-16          
                                           
-            Sensitivity : 0.5424          
-            Specificity : 0.5952          
-         Pos Pred Value : 0.7179          
-         Neg Pred Value : 0.4065          
-             Prevalence : 0.6550          
-         Detection Rate : 0.3553          
-   Detection Prevalence : 0.4949          
-      Balanced Accuracy : 0.5688          
+            Sensitivity : 0.5410          
+            Specificity : 0.5917          
+         Pos Pred Value : 0.7806          
+         Neg Pred Value : 0.3243          
+             Prevalence : 0.7287          
+         Detection Rate : 0.3942          
+   Detection Prevalence : 0.5050          
+      Balanced Accuracy : 0.5664          
                                           
        'Positive' Class : 1               
                                           
@@ -1632,7 +1648,7 @@ summary(sea_data$grad_pred_3)
 
 ```
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
- 0.2852  0.6131  0.6558  0.6550  0.6974  0.9401    1354 
+ 0.3745  0.6937  0.7302  0.7283  0.7650  0.9541    1224 
 ```
 
 ```r
@@ -1642,7 +1658,7 @@ summary(sea_data$grad_pred_3[test_idx])
 
 ```
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
- 0.3027  0.6138  0.6566  0.6561  0.6985  0.9375     644 
+ 0.3939  0.6944  0.7309  0.7293  0.7659  0.9521     591 
 ```
 
 ```r
@@ -1656,8 +1672,8 @@ table(Observed = sea_data$ontime_grad[test_idx],
 ```
         Predicted
 Observed  FALSE   TRUE
-       0 0.0961 0.2478
-       1 0.1134 0.5427
+       0 0.0657 0.2043
+       1 0.1067 0.6232
 ```
 
 Second, should we use subgroup membership variables (such as demographics or
@@ -1679,6 +1695,6 @@ syntax and advice for building more complex statistical models.
 
 ### Giving Feedback on this Guide
 
-This guide is an open-source document hosted on Github and generated using R
+This guide is an open-source document hosted on GitHub and generated using R
 Markdown. We welcome feedback, corrections, additions, and updates. Please visit
 the OpenSDP equity metrics repository to read our contributor guidelines.

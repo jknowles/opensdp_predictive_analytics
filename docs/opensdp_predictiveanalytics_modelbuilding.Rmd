@@ -39,12 +39,14 @@ knitr::opts_chunk$set(comment = NA, warning = FALSE, echo = TRUE,
 options(width = 80)
 ```
 
+## Introduction
+
 ### Objective
 
 After completing this guide, the user will be able to fit and test a range 
 of statistical models for predicting education outcomes. You will also be 
 able to make predictions on future data and communicate the model fit and 
-tradeoffs of models with stakeholders. 
+trade-offs of models with stakeholders. 
 
 ### Using this Guide
 
@@ -57,7 +59,7 @@ data like this or the procedure used to generate the data, the code used
 is included in the data subdirectory. 
 
 
-## Getting Started
+### Getting Started
 
 If you're using the `Rmd` file version of these materials, start by saving a new
 version of the file, so you can edit it without worrying about overwriting the
@@ -76,7 +78,7 @@ demographics, academic performance in 7th grade, associated school and district
 additional details on the data elements that makeup the synthetic data, there is
 a codebook available in the data sub-directory.
 
-## Setup
+### Setup
 
 To prepare for this project you will need to ensure that your R installation
 has the necessary add-on packages and that you can read in the training data.
@@ -93,7 +95,7 @@ install.packages("caret") # for machine learning
 install.packages("future") # for multicore processing on Windows/Mac/Linux
 ```
 
-```{r loadWorkspace}
+```{r loadWorkspace, message=FALSE}
 # Load the packages you need
 library(dplyr)
 library(pROC)
@@ -117,9 +119,15 @@ sea_data$sid <- paste(sea_data$sid, sea_data$sch_g7_lea_id, sep = "-")
 sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
 ```
 
+### Outline
 
+1. Prepare the Data for Training
+2. Fit New Models
+3. Evaluate Model Fit
 
-## Beyond Logistic Regression
+## Prepare the Data
+
+### Beyond Logistic Regression
 
 In the last guide we ended up with a logistic regression model with several predictors.
 Logistic regression is where you should start. It is fast to compute, easier to
@@ -148,7 +156,7 @@ in strength of our model and to ultimately select the wrong model.
 
 When we fit the logistic regression model we used R's formula interface to specify our model and let
 R handle the process of turning our data into a matrix suitable for model estimation. When fitting
-models using caret, it is a good practie to create the model matrix on our own. We do this for three
+models using caret, it is a good practice to create the model matrix on our own. We do this for three
 reasons - first, not all of the algorithms accessible via the `caret::train()` function work with
 the formula interface. Having a model matrix allows us to take full advantage of the suite of models
 `caret()` can access (and models outside of that as well such as `keras` models). Second, the matrix
@@ -224,7 +232,7 @@ test_idx <- !row.names(sea_data[sea_data$year > 2005,]) %in% train_idx
 
 ### Scale and Center Predictors
 
-The reason we scale and center our continuouse predictors last is that scaling and centering the
+The reason we scale and center our continuous predictors last is that scaling and centering the
 data is - in a way - fitting a model to the data. We do not want information from the test set to
 carry over to the training set - which it would if we scaled and centered the entire dataset
 together. So we get the scaling and centering parameters on the training set, and we then apply 
@@ -251,6 +259,10 @@ preds <- predict(pre_proc,
                  ) # keep only the columns of dummy and continuous variables
 
 ```
+
+## Fit Models
+
+### Prepare the Model Fitting Parameters
 
 Once we have defined our predictor variables, we need to tell `train` how we want to test our
 models. Most of the algorithms offered through `caret` have "tuning parameters", user-controlled
@@ -311,6 +323,8 @@ example_control <- trainControl(
 
 train_idx_small <- sample(1:nrow(preds), 2e4)
 ```
+
+### Train the Models
 
 And then we are ready to fit our model to the data:
 
@@ -377,7 +391,7 @@ This plot only tells us about our results on the data we have used in training.
 We are estimating our accuracy on the cross-validated resamples on the training 
 data. 
 
-## Test Your Results
+## Predict and Out of Sample Validation
 
 Now we need to evaluate our performance on our hold-out set of data.
 
@@ -416,15 +430,8 @@ roc(response = test_y, predictor = yhat <- yhat) %>% plot
 ```
 
 
-## References and More
 
-The `caret` package has extensive documentation which you can use to find
-new models, learn about algorithms, and explore many other important aspects
-of building predictive analytics. You can learn more here:
-
-https://topepo.github.io/caret/
-
-## Predicting on New Data
+## Predicting on Future Data
 
 Here is a block of code that will allow you to make predictions on new data. To
 do this we need to identify our model object and read in our new data for
@@ -669,8 +676,8 @@ the research literature on dropout early warning models. In a 2013 paper, Bowers
 Sprott, and Taff placed the predictive performance of over 100 dropout risk 
 indicators onto the ROC scale (true positive rate and false negative rate). 
 Using this framework, we can recreate a plot from that paper and annotate it with 
-the performance of our model to benchmark against previous studies. TO do this 
-we need the data from Bowers et. al. and a data frame of 
+the performance of our model to benchmark against previous studies. To do this 
+we need the data from Bowers et. al. and a data frame of estimates `estimates_tbl`. 
 
 
 ```{r}
@@ -686,3 +693,11 @@ bowers_plot() +
 
 # Use a custom probability threshold
 ```
+
+## References and More
+
+The `caret` package has extensive documentation which you can use to find
+new models, learn about algorithms, and explore many other important aspects
+of building predictive analytics. You can learn more here:
+
+https://topepo.github.io/caret/
