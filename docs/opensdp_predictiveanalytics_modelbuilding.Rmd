@@ -121,9 +121,34 @@ sea_data$scale_score_7_math[sea_data$scale_score_7_math < 0] <- NA
 
 ### Outline
 
+Here are the steps:
+
 1. Prepare the Data for Training
 2. Fit New Models
 3. Evaluate Model Fit
+4. Explore the Fitted Model Objects
+5. Compare Our Models to Others
+
+In this guide, we will start from a data set that has been prepared, but if you
+are applying this to work in your organization, it's a good idea to review the 
+Introduction to Predictive Analytics in Education guide and walk through the 
+process of reviewing and exploring data for predictive analytics. 
+
+We're using multiple cohorts of middle-school students for the predictive analytics task -- students
+who were seventh graders between 2007 and in 2011. These are the cohorts for which we have access to
+reliable information on their high school graduation status (late graduate, on time graduate,
+dropout, transferred out, disappeared). For this guide you are being given the entire set of data so
+that you can explore different ways of organizing the data across cohorts. This guide explores
+models and data from the earlier cohorts, and evaluates their performance on more recent cohorts.
+
+One last point -- even though the data is synthetic, we have simulated missing data
+for you. In the real world, you'll need to make predictions for every
+student, even if you're missing data for that student which your model needs in
+order to run. Just making predictions using a logistic regression won't be
+enough. You'll need to use decision rules based on good data exploration and
+your best judgment to predict and fill in outcomes for students where you have
+insufficient data.
+
 
 ## Prepare the Data
 
@@ -264,10 +289,10 @@ preds <- predict(pre_proc,
 
 ### Prepare the Model Fitting Parameters
 
-Once we have defined our predictor variables, we need to tell `train` how we want to test our
+Once we have defined our predictor variables, we need to tell `train()` how we want to test our
 models. Most of the algorithms offered through `caret` have "tuning parameters", user-controlled
 values, that are not estimated from the data. Our goal is to experiment with these values and find
-the values that fit the data the best. To do this, we must tell `train` which values to try, and how
+the values that fit the data the best. To do this, we must tell `train()` which values to try, and how
 to evaluate their performance.
 
 Luckily, `train()` has a number of sensible defaults that largely automate this process for us. For
@@ -305,6 +330,8 @@ Caret has a number of complex options, you can read about under `?trainControl`.
 Here we set some sensible defaults
 
 ```{r definemodeltestparameter}
+set.seed(2532) # set seed so models are comparable
+
 example_control <- trainControl(
   method = "cv", # we cross-validate our model to avoid overfitting
   classProbs = TRUE,  # we want to be able to predict probabilities, not just binary outcomes
@@ -335,7 +362,6 @@ explaining how each of them works.
 
 ```{r caretfit}
 # This will take quite some time:
-set.seed(2532) # set seed so models are comparable
 
 #
 rpart_model <- train(
@@ -343,42 +369,78 @@ rpart_model <- train(
   # to the smaller number of observations
   x = preds[train_idx_small, ], # specify the matrix of predictors, again subset
   method = "rpart",  # choose the algorithm - here a regression tree
-  tuneLength = 24, # choose how many values of tuning parameters to test
+  tuneLength = 12, # choose how many values of tuning parameters to test
   trControl = example_control, # set up the conditions for the test (defined above)
    metric = "ROC" # select the metric to choose the best model based on
   )
 
 ```
 
+The `train()` function trains our model by splitting the data using a resampling strategy - in this 
+case crossvalidation - and applying the algorithm of our choice to the resampled data. A key 
+difference for algorithms fit through `train()` and a traditional logistic regression model is the 
+presence of tuning parameters - model parameters not tied to data. These are options that we have 
+to specify as the user. The `train()` function searches possible values of these parameters and 
+learns the value that performs best on our data - this process is often called tuning. 
+(TODO: LINK TO RESAMPLING RESOURCE)
+
+The `rpart_model` object produced by `train()` includes not only the final tuned model, but also 
+the results of the training experiment including the model performance for each value of the tuning 
+parameter. Much of the art of predictive analytics is in defining the tuning parameter search 
+space, choosing the correct model performance metric, and specifying the correct resampling strategy 
+to correctly estimate model performance on future data. The result of this process is a meta-model 
+that is estimating the likely performance of the model at different tuning parameter values in 
+predicting future data. 
+
 To fit a second model it's as easy as changing the `method` argument to caret and specifying a 
-new method. 
+new method. In this case we will use the same training process, but we will tune fewer values 
+of the tuning parameters for this new algorithm. (TODO: Link to caret method list)
 
 ```{r caretfit2}
 # Repeat above but just change the `method` argument to GBM for gradient boosted machines
-gbm_model <- train(y = yvar[train_idx_small],
+treebag_model <- train(y = yvar[train_idx_small],
              x = preds[train_idx_small,],
-             method = "gbm", tuneLength = 4,
+             method = "treebag", tuneLength = 4,
              trControl = example_control,
              metric = "ROC")
 ```
 
+This object uses the `treebag` method. Note that `caret` tries to provide a unified interface to 
+over 200 algorithm types available in R. Not all of these algorithms are suitable for modeling 
+all types of data and many of these methods will require the installation of additional R packages. 
+When exploring your algorithm options it can be helpful to consult a textbook and to review available 
+methods by their "family" to identify which algorithmic families may be most efficient for your 
+problem at hand. 
+
 #### Look at Our Models
+
+When we print out the model objects we do not get a list of coefficients and table of statistical 
+significance as we would with a linear model - instead we get the results of our model training 
+experiment: a table of model performance statistics for every value of the tuning parameter. Notice 
+that the `rpart_model` object has multiple rows of results, but the `treebag_model`, which has no 
+tuning parameters to be learned from the data, has just a single row. 
 
 ```{r}
 print(rpart_model)
-print(gbm_model)
+print(treebag_model)
 ```
 
+The best value of the tuning parameter is chosen by selecting the value that optimizes the performance 
+metric we specified to `trainControl()` - in this case, the `ROC` that is maximized. This value is 
+only measured on the holdout set in our cross-validation startegy. 
 
 ## Model Comparison
 
 Our next step is to compare our two models. One quick way to do this is to compare the prediction 
-performance of each of the models across all of the folds.
+performance of each of the models across all of the folded holdout sets. This results in 10 
+estimates of out of sample performance. We can plot these estimates to see how the distribution 
+of out of sample performance metrics compares between two models. The `resamples()` function in 
+caret makes this easy: 
 
 ```{r caretmodeleval}
 # Construct a list of model performance comparing the two models directly
 resamps <- caret::resamples(list(RPART = rpart_model,
-              GBM = gbm_model))
+              TREEBAG = treebag_model))
 # Summarize it
 summary(resamps)
 # plot it
@@ -387,13 +449,39 @@ dotplot(resamps, metric = "ROC")
 
 ```
 
-This plot only tells us about our results on the data we have used in training. 
+This shows us that while the best performance of the `treebag_model` exceeded that 
+of the `rpart_model` - there is quite a lot of overlap when the experiment is repeated ten 
+times. This will often be the case and the amount of variability in out of sample 
+performance (variance) is an important factor to take into account when selecting models. 
+It isn't just simply a matter of taking the model that maximizes the cross-validated ROC - 
+we may need to factor in the variability in that outcome and the cost in terms of time 
+and computing power necessary to get that result. 
+
+Ultimately, this plot only tells us about our results on the data we have used in training. 
 We are estimating our accuracy on the cross-validated resamples on the training 
-data. 
+data. In our case, that means each model has it's performance estimated 10 times on a 2,000 row 
+subset of the data (nrows / K) that was not seen for that particular tuning parameter. What 
+we really care about is how the model performs on future cohorts, and this is why we left 
+some of our data out of the model building process altogether as a validation set. It's time 
+now to assess the performance of these two models on that future cohort. 
 
 ## Predict and Out of Sample Validation
 
-Now we need to evaluate our performance on our hold-out set of data.
+Now we need to evaluate our performance on our hold-out set of data. Remember that we split our 
+data up by time so our model has been trained on cohorts from the earlier years in our data. The 
+true test of our model comes in seeing how well it predicts future cohorts of students - cohorts 
+the model has never seen. This is where we see how robust the model is to changes in the measures 
+used and secular patterns in student attainment. 
+
+This is a little more involved than running the predict command - we need to transform our test 
+data using the exact same process and parameters we used to transform the training data. Luckily 
+we stored the `pre_proc` object which we can now apply to the test dataset. Then we recode the 
+outcome variable for the test data, which we will use to compare our model predictions to. 
+
+We can use a number of different approaches in R to evaluate model performance, but since we 
+are already using the `caret` package we can use its built in `confusionMatrix()` function to 
+compare the observed graduation status of students with the predictions from our models above 
+on the new data object `test_data`. 
 
 ```{r caretmodelpredict}
 # We use the pre-processing we defined on the training data, but this time
@@ -408,34 +496,43 @@ test_y <- sea_data[test_idx, "ontime_grad"]
 test_y <- ifelse(test_y == 1, "grad", "nongrad")
 test_y <- factor(test_y)
 
-confusionMatrix(reference = test_y, data = predict(rpart_model, test_data))
-# Note that making predictions from the nb classifier can take a long time
+confusionMatrix(reference = test_y, data = predict(rpart_model, test_data), 
+                positive = "nongrad", mode = "everything")
+# Note that making predictions can take a long time
 # consider alternative models or making fewer predictions if this is a bottleneck
-confusionMatrix(reference = test_y, data = predict(gbm_model, test_data))
+confusionMatrix(reference = test_y, data = predict(treebag_model, test_data), 
+                positive = "nongrad",  mode = "everything")
 ```
 
-We can also make ROC plots of our test-set, out of sample, prediction accuracy.
+This allows us to compare the models on a wide range of possible performance metrics to see what 
+tradeoffs there are between them. It looks like, despite having fewer tuning parameters, the 
+`treebag_model` is outperforming the `rpart_model` on the validation set. 
+
+Let's look at this graphically as well: We can also make ROC plots of our test-set, out of sample, prediction accuracy.
 
 ```{r outofsampleROC}
 # ROC plots
 yhat <- predict(rpart_model, test_data, type = "prob")
 yhat <- yhat$grad
 roc(response = test_y, predictor = yhat <- yhat) %>% plot
-# NB ROC plot
-# Note that making predictions from the nb classifier can take a long time
-# consider alternative models or making fewer predictions if this is a bottleneck
-yhat <- predict(gbm_model, test_data, type = "prob")
+# TB ROC plot
+yhat <- predict(treebag_model, test_data, type = "prob")
 yhat <- yhat$grad
 roc(response = test_y, predictor = yhat <- yhat) %>% plot
 ```
 
 
-
 ## Predicting on Future Data
 
-Here is a block of code that will allow you to make predictions on new data. To
-do this we need to identify our model object and read in our new data for
-current students. Then we simply make predictions. This is called model scoring.
+Now that you've picked your model you need to be able to put it into production and predict the 
+future outcomes for current students. This guide includes simulated current student data (student 
+data without an observed outcome) so you can walk through the process of applying your trained 
+models to this new data. 
+
+This process is called model scoring. The key step here is that we have to pre-process the current 
+data the exact same way we pre-processed the training data. In this case we can apply the `preproc` 
+object we used above to the current data - assuming we are using the same variable names and 
+have done the same work converting indicator data to factors. 
 
 ```{r}
 load("../data/montucky_current.rda")
@@ -454,11 +551,11 @@ pred_data <- predict(pre_proc,
                         c(continuous_x_vars, categ_vars)]) # keep the same vars
 
 
-preds_gbm <- predict(gbm_model, newdata = pred_data, type = "prob")$grad
+preds_treebag <- predict(treebag_model, newdata = pred_data, type = "prob")$grad
 preds_rpart <- predict(rpart_model, newdata = pred_data, type = "prob")$grad
 
 current_data <- bind_cols(current_data,
-                          data.frame(preds_gbm),
+                          data.frame(preds_treebag),
                           data.frame(preds_rpart))
 str(current_data)
 ```
@@ -539,40 +636,29 @@ We can also plot these values in a graph and inspect it visually.
 ## Variable importance from a caret/train model object
 ########################################################################
 
-## Fit a simple model just to show the syntax, you should be fitting a model
-## split on train and test data, substitute your own model here.
-
-# Unfortunately, we have to remove NAs first, because
-# caret won't do it for us
-train_data <- na.omit(sea_data[, c("ontime_grad", "scale_score_7_math",
-                                   "pct_days_absent_7", "ell_7", "iep_7",
-                                   "male", "frpl_7", "race_ethnicity",
-                                   "sch_g7_lep_per", "sch_g7_gifted_per")])
-
-# Outcome must be a factor in R to work with caret, so we recode
-# Avoid 0/1 factor labels - this causes problems in fitting many model types.
-train_data$ontime_grad <- ifelse(train_data$ontime_grad == 1, "Grad", "Nongrad")
-train_data$ontime_grad <- factor(train_data$ontime_grad)
-
-# Fit the model
-caret_mod <- train(ontime_grad ~ .,
-                   method = "rpart",
-                   data = train_data,
-                   metric = "ROC",
-                   trControl = trainControl(summaryFunction = twoClassSummary,
-                                            classProbs = TRUE,
-                                            method = "cv"))
-
 # Get variable importance, not available for all methods
-caret::varImp(caret_mod)
+caret::varImp(rpart_model)
 
 # Plot variable importance
-plot(caret::varImp(caret_mod))
+plot(caret::varImp(rpart_model))
+plot(caret::varImp(treebag_model))
 ```
+
+The difference between the importance of the predictors in each model helps us to understand the 
+different ways each model is arriving at its predictions. This is a convenient way to get an at a 
+glance look at what is driving the predictions of our model inside the black box. (TODO: Link to 
+other resources on this)
 
 ### Probability Trade offs
 
-Another 
+Another key aspect to predicting binary outcomes is deciding, as we saw in the first guide, how 
+strong the predicted probability of an outcome has to be before we classify a student into a 
+particular category. When we are working with binary outcomes, it can be helpful to use the ROC 
+plot approach to evaluate at which point in the probability distribution we are identifying enough 
+students without raising too many false alarms. 
+
+The `yardstick` package for R provides a useful interface for quickly comparing many models on a 
+number of performance metrics, including making tradeoff plots. 
 
 ```{r tidyrocplots}
 ########################################################################
@@ -584,16 +670,16 @@ library(yardstick)
 library(dplyr)
 
 # Get the predicted classifications from the caret model above
-class_vec <- predict(caret_mod, newdata = train_data)
+class_vec <- predict(treebag_model, newdata = test_data)
 # Get the predicted probabilities from the model above
 ## Note that caret insists on giving probabilities for both classes, we
 ## need to store only one, in this case, the first one
-prob_vec <- predict(caret_mod, newdata = train_data, type = "prob")[[1]] # only need first column
+prob_vec <- predict(treebag_model, newdata = test_data, type = "prob")[[1]] # only need first column
 
 # Combine the true values, the estimated class, and the class probability
 # into one dataframe for plotting
 estimates_tbl <- data.frame(
-  truth = as.factor(train_data$ontime_grad),
+  truth = test_y,
   estimate = as.factor(class_vec),
   class_prob = prob_vec
 )
@@ -655,7 +741,7 @@ plotdf <- estimates_tbl %>%
   group_by(prob_cut) %>%
   summarize(
     avg_prob = mean(class_prob),
-    prob_grad = sum(truth == "Grad") / length(truth),
+    prob_grad = sum(truth == "grad") / length(truth),
     count = n())
 
 
@@ -665,7 +751,12 @@ library(ggalt) # for fun lollipop charts
 ggplot(plotdf, aes(x = avg_prob, y = prob_grad)) +
   ggalt::geom_lollipop() + theme_classic() +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand=FALSE) +
-  geom_smooth(se=FALSE)
+  geom_smooth(se=FALSE) + 
+  labs(x = "Mean Probability for Percentile", 
+       y = "Probability of Student Graduating", 
+       title = "Relationship between Increased Predicted Probability and Graduation Rates", 
+       subtitle = "On Holdout Dataset",
+       caption = "On Holdout Dataset for Treebag Model")
 
 ```
 
@@ -680,7 +771,8 @@ the performance of our model to benchmark against previous studies. To do this
 we need the data from Bowers et. al. and a data frame of estimates `estimates_tbl`. 
 
 
-```{r}
+```{r bowers_plot}
+# Requires internet connection
 ################################################################################
 ## Advanced: Make a Bowers plot
 #################################################################################
