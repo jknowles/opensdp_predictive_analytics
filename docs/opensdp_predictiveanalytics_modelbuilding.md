@@ -40,7 +40,7 @@ trade-offs of models with stakeholders.
 
 ### Using this Guide
 
-This guide uses synthetic data created by the OpenSDP synthetic data engine.
+This guide uses synthetic data created by [the OpenSDP synthetic data engine.](https://opensdp.github.io/data/)
 The data reflects student-level attainment data and is organized to be similar 
 to the level of detail available at a state education agency - with a single 
 row representing a student-grade-year. This guide does not cover the steps 
@@ -146,11 +146,12 @@ insufficient data.
 
 ### Beyond Logistic Regression
 
-In the last guide we ended up with a logistic regression model with several predictors.
+[In the last guide](https://jknowles.github.io/opensdp_predictive_analytics/opensdp_predictive_analytics.html) we ended up with a logistic regression model with several predictors.
 Logistic regression is where you should start. It is fast to compute, easier to
 interpret, and usually does a great job. However, there are a number of alternative
 algorithms available to you and R provides a common interface to them through the
-`caret` package. The `train` function (as in, training the models) is the
+[`caret` package.](https://topepo.github.io/caret/index.html) 
+The `train` function (as in, training the models) is the
 workhorse of the `caret` package. It has an extensive set of user-controlled
 options.
 
@@ -176,7 +177,7 @@ R handle the process of turning our data into a matrix suitable for model estima
 models using caret, it is a good practice to create the model matrix on our own. We do this for three
 reasons - first, not all of the algorithms accessible via the `caret::train()` function work with
 the formula interface. Having a model matrix allows us to take full advantage of the suite of models
-`caret()` can access (and models outside of that as well such as `keras` models). Second, the matrix
+`caret` can access (and models outside of that as well such as `keras` models). Second, the matrix
 approach is more memory efficient and avoids costly data transformation operations during the
 fitting of models - a particularly important concern when dealing with datasets with many rows
 and/or predictors. Third, it provides us a good opportunity to check our data again and identify
@@ -185,7 +186,16 @@ perfectly collinear predictors.
 
 One workflow for doing this is the annotated R code below, which uses the data preparation functions 
 built into the `caret` package to help build model matrices that can be applied to training and 
-test data together.
+test data together.[^1] The basic outline is that we manually build a matrix of indicator variables 
+for our categorical variables and we identify and store a vector of names of our continuous 
+variables. This will allow us to process these variables separately throughout the model building 
+process. 
+
+[^1]: This is one approach based on the functionality of the `caret` package which is a stable 
+and reliable machine learning interface in R with lots of documentation and years of support. A 
+[newer approach is in develop called `tidymodels`](https://github.com/tidymodels) - but this set of
+tools is, as of this writing, still developing and likely to change. It also has only a subset of
+the current functionality of `train`. But - keep an eye out.
 
 
 
@@ -218,22 +228,13 @@ continuous_x_vars <- c('scale_score_7_math', 'scale_score_7_read',
 
 ### Training / Test Data
 
-Now we need to define our training and test data split. There are a number of ways you can split 
+Now that we have defined our model matrix and prepared our data for a variety of algorithms, we 
+need to define our training and test data split. There are a number of ways you can split 
 your data to estimate your out-of-sample model accuracy, but here we will opt for a temporal split 
 where we fit the model to the earliest years of data in our model and hold out the most recent 
-year in our data for "testing" the model fit. 
+year in our data for "testing" the model fit.[^2] 
 
-#### Missingness
-
-The caret package does not automatically handle missing data, so we have to do some additional work
-when we define our training/test data split. You can choose additional ways to address missing data
-(imputation, substituting mean values, etc.) - here we opt for the simple but aggressive strategy of
-excluding any row with missing values for any predictor from being in the training data. 
-
-#### Outliers
-
-This is not directly covered here, but you will also want to ensure outliers are dropped from your 
-training data at this stage (if not earlier). 
+[^2]: See Kuhn and Johnson, 2019. [http://www.feat.engineering/data-splitting.html](http://www.feat.engineering/data-splitting.html)
 
 
 
@@ -246,6 +247,22 @@ train_idx <- row.names( # get the row.names to define our index
 )
 test_idx <- !row.names(sea_data[sea_data$year > 2005,]) %in% train_idx
 ```
+
+#### Missingness
+
+The caret package does not automatically handle missing data, so we have to do some additional work
+when we define our training/test data split. You can choose additional ways to address missing data
+(imputation, substituting mean values, etc.) - here we opt for the simple but aggressive strategy of
+excluding any row with missing values for any predictor from being in the training data.[^3]
+
+[^3]: The handling of missing data in predictive analytics has no rule of thumb or default solution. 
+It is a complex and rapidly evolving frontier for research. 
+[See Kuhn and Johnson, 2013 for details.](http://appliedpredictivemodeling.com/)
+
+#### Outliers
+
+This is not directly covered here, but you will also want to ensure outliers are dropped from your 
+training data at this stage (if not earlier). 
 
 ### Scale and Center Predictors
 
@@ -277,21 +294,28 @@ preds <- predict(pre_proc,
                  ) # keep only the columns of dummy and continuous variables
 ```
 
-## Fit Models
+## Train Models
+
+Now we have prepared our data we are ready to begin the process of setting up our model training 
+and then fitting our models. A key difference between many of the algorithms available through 
+`caret` and more traditional models like logistic regression, is that many algorithms have 
+parameters that are set by the user - not learned from the data (these are sometimes callled 
+hyperparameters). To evaluate these models then and find a good fit to the data, we need to fit 
+them at several different values of these parameters and identify the values that best predict 
+our outcome. This process is examined in detail below: 
 
 ### Prepare the Model Fitting Parameters
 
 Once we have defined our predictor variables, we need to tell `train()` how we want to test our
-models. Most of the algorithms offered through `caret` have "tuning parameters", user-controlled
-values, that are not estimated from the data. Our goal is to experiment with these values and find
-the values that fit the data the best. To do this, we must tell `train()` which values to try, and how
-to evaluate their performance.
+models. Our goal is to experiment with the "tuning" or "hyper" parameters for our algorithms and
+find the values that predict the outcome best. To do this, we must tell `train()` which values to
+try, and how to evaluate their performance.
 
-Luckily, `train()` has a number of sensible defaults that largely automate this process for us. For
-the purpose of this exercise, a good set of defaults is to use the `twoClassSummary()` model
-evaluation function (which tells us the area under the curve as well as the sensitivity,
-specificity, and accuracy) and to use cross-fold validation. To set up our model training run 
-we need to make three final steps:
+Luckily, `train()` has a number of sensible defaults  and tools that largely automate this process
+for us. For the purpose of this exercise, a good set of defaults is to use the `twoClassSummary()`
+model evaluation function (which tells us the area under the curve as well as the sensitivity,
+specificity, and accuracy) and to use cross-fold validation. To set up our model training run we
+need to make three final steps:
 
 1. Set up R to use the computing resources on our machine
 
@@ -308,7 +332,8 @@ registerDoFuture() # register them with R
 
 Caret really really really likes if you do binary classification that you
 code the variables as factors with alphabetical labels. In this case, we
-recode 0/1 to be nongrad, grad.
+recode 0/1 to be nongrad, grad. We also split the outcome variable off from 
+the data and store it separately now as its own vector. 
 
 
 
@@ -331,7 +356,7 @@ example_control <- trainControl(
   method = "cv", # we cross-validate our model to avoid overfitting
   classProbs = TRUE,  # we want to be able to predict probabilities, not just binary outcomes
   returnData = TRUE, # we want to store the model data to allow for postestimation
-  summaryFunction = twoClassSummary, # we want to use the prSummary for better two-class accuracy measures
+  summaryFunction = twoClassSummary, # we use the twoClassSummary for two-class accuracy measures
   trim = TRUE, # we want to reduce the size of the final model object to save RAM
   savePredictions = "final", # we want to store the predictions from the final model
   returnResamp = "final", # we want to store the resampling code to directly compare other methods
@@ -358,8 +383,6 @@ explaining how each of them works.
 
 ```r
 # This will take quite some time:
-
-#
 rpart_model <- train(
   y = yvar[train_idx_small], # specify the outcome, here subset
   # to the smaller number of observations
@@ -376,8 +399,9 @@ case crossvalidation - and applying the algorithm of our choice to the resampled
 difference for algorithms fit through `train()` and a traditional logistic regression model is the 
 presence of tuning parameters - model parameters not tied to data. These are options that we have 
 to specify as the user. The `train()` function searches possible values of these parameters and 
-learns the value that performs best on our data - this process is often called tuning. 
-(TODO: LINK TO RESAMPLING RESOURCE)
+learns the value that performs best on our data - this process is often called tuning. For a 
+deeper explanation of how this works and what [is going on in `train()` see this writeup.](http://zevross.com/blog/2017/09/19/predictive-modeling-and-machine-learning-in-r-with-the-caret-package/#easy-data-splitting)
+
 
 The `rpart_model` object produced by `train()` includes not only the final tuned model, but also 
 the results of the training experiment including the model performance for each value of the tuning 
@@ -389,7 +413,10 @@ predicting future data.
 
 To fit a second model it's as easy as changing the `method` argument to caret and specifying a 
 new method. In this case we will use the same training process, but we will tune fewer values 
-of the tuning parameters for this new algorithm. (TODO: Link to caret method list)
+of the tuning parameters for this new algorithm.[^4]
+
+[^4]: For a full list of methods available in the `caret` package - 
+[see here.](https://topepo.github.io/caret/available-models.html)
 
 
 ```r
@@ -791,7 +818,7 @@ binary.model <- rpart(ontime_grad ~ scale_score_7_math +
 rpart.plot(binary.model)
 ```
 
-<img src="../figure/pa_2unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
+<img src="../figure/pa_2plotrpartree-1.png" style="display: block; margin: auto;" />
 
 ```r
 # To improve the labels, you can rename the variables in the data
@@ -816,7 +843,7 @@ binary.model <- rpart(ontime_grad ~ scale_score_7_math +
 rpart.plot(binary.model)
 ```
 
-<img src="../figure/pa_2unnamed-chunk-3-2.png" style="display: block; margin: auto;" />
+<img src="../figure/pa_2plotrpartree-2.png" style="display: block; margin: auto;" />
 
 ### Variable Importance
 
@@ -871,18 +898,23 @@ race_ethnicityNative...     0.00000
 plot(caret::varImp(rpart_model))
 ```
 
-<img src="../figure/pa_2unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
+<img src="../figure/pa_2plotvariableimportance-1.png" style="display: block; margin: auto;" />
 
 ```r
 plot(caret::varImp(treebag_model))
 ```
 
-<img src="../figure/pa_2unnamed-chunk-4-2.png" style="display: block; margin: auto;" />
+<img src="../figure/pa_2plotvariableimportance-2.png" style="display: block; margin: auto;" />
 
 The difference between the importance of the predictors in each model helps us to understand the 
 different ways each model is arriving at its predictions. This is a convenient way to get an at a 
-glance look at what is driving the predictions of our model inside the black box. (TODO: Link to 
-other resources on this)
+glance look at what is driving the predictions of our model inside the black box.[^5]
+
+[^5]: There are many other methods for interpreting machine learning models and this is one of the 
+areas under the most active research. Most of these methods involve fitting simpler models to 
+subsets of the predictions to explore the relationship between predictors and predictions at different 
+points in the dataset. For a tour of machine learning model intepretation methods 
+[visit Molnar, 2019 Interpretable Machine Learning.](https://christophm.github.io/interpretable-ml-book/agnostic.html)
 
 ### Probability Trade offs
 
@@ -983,7 +1015,7 @@ conf_mat <- estimates_tbl %>% yardstick::conf_mat(truth, estimate)
 library(vcd)
 labs <- round(prop.table(conf_mat$table), 2)
 # Can change the margin to change the labels
-mosaic(conf_mat$table, pop=FALSE)
+mosaic(conf_mat$table, pop = FALSE)
 labeling_cells(text = labs, margin = 0)(conf_mat$table)
 ```
 
@@ -1022,8 +1054,8 @@ library(ggalt) # for fun lollipop charts
 
 ggplot(plotdf, aes(x = avg_prob, y = prob_grad)) +
   ggalt::geom_lollipop() + theme_classic() +
-  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand=FALSE) +
-  geom_smooth(se=FALSE) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+  geom_smooth(se = FALSE) + 
   labs(x = "Mean Probability for Percentile", 
        y = "Probability of Student Graduating", 
        title = "Relationship between Increased Predicted Probability and Graduation Rates", 
@@ -1059,10 +1091,6 @@ bowers_plot() +
 ```
 
 <img src="../figure/pa_2bowers_plot-1.png" style="display: block; margin: auto;" />
-
-```r
-# Use a custom probability threshold
-```
 
 ## References and More
 

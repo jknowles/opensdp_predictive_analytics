@@ -418,7 +418,10 @@ predicting future data.
 
 To fit a second model it's as easy as changing the `method` argument to caret and specifying a 
 new method. In this case we will use the same training process, but we will tune fewer values 
-of the tuning parameters for this new algorithm. (TODO: Link to caret method list)
+of the tuning parameters for this new algorithm.[^4]
+
+[^4]: For a full list of methods available in the `caret` package - 
+[see here.](https://topepo.github.io/caret/available-models.html)
 
 ```{r caretfit2}
 # Repeat above but just change the `method` argument to GBM for gradient boosted machines
@@ -444,7 +447,7 @@ experiment: a table of model performance statistics for every value of the tunin
 that the `rpart_model` object has multiple rows of results, but the `treebag_model`, which has no 
 tuning parameters to be learned from the data, has just a single row. 
 
-```{r}
+```{r printcaretobject}
 print(rpart_model)
 print(treebag_model)
 ```
@@ -558,7 +561,7 @@ data the exact same way we pre-processed the training data. In this case we can 
 object we used above to the current data - assuming we are using the same variable names and 
 have done the same work converting indicator data to factors. 
 
-```{r}
+```{r loadcurrentdata}
 load("../data/montucky_current.rda")
 
 current_data$frpl_7 <- factor(current_data$frpl_7)
@@ -600,7 +603,7 @@ available predictors so each branch of the tree uniquely identifies a specific
 combination of values of predictors that divide the outcome well between the 
 two groups. 
 
-```{r}
+```{r plotrpartree}
 ########################################################################
 # Build and plot a regression tree
 ########################################################################
@@ -655,7 +658,7 @@ for the predictors in the model.
 We can also plot these values in a graph and inspect it visually. 
 
 
-```{r}
+```{r plotvariableimportance}
 ########################################################################
 ## Variable importance from a caret/train model object
 ########################################################################
@@ -670,8 +673,13 @@ plot(caret::varImp(treebag_model))
 
 The difference between the importance of the predictors in each model helps us to understand the 
 different ways each model is arriving at its predictions. This is a convenient way to get an at a 
-glance look at what is driving the predictions of our model inside the black box. (TODO: Link to 
-other resources on this)
+glance look at what is driving the predictions of our model inside the black box.[^5]
+
+[^5]: There are many other methods for interpreting machine learning models and this is one of the 
+areas under the most active research. Most of these methods involve fitting simpler models to 
+subsets of the predictions to explore the relationship between predictors and predictions at different 
+points in the dataset. For a tour of machine learning model intepretation methods 
+[visit Molnar, 2019 Interpretable Machine Learning.](https://christophm.github.io/interpretable-ml-book/agnostic.html)
 
 ### Probability Trade offs
 
@@ -738,7 +746,7 @@ conf_mat <- estimates_tbl %>% yardstick::conf_mat(truth, estimate)
 library(vcd)
 labs <- round(prop.table(conf_mat$table), 2)
 # Can change the margin to change the labels
-mosaic(conf_mat$table, pop=FALSE)
+mosaic(conf_mat$table, pop = FALSE)
 labeling_cells(text = labs, margin = 0)(conf_mat$table)
 ```
 
@@ -774,8 +782,8 @@ library(ggalt) # for fun lollipop charts
 
 ggplot(plotdf, aes(x = avg_prob, y = prob_grad)) +
   ggalt::geom_lollipop() + theme_classic() +
-  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand=FALSE) +
-  geom_smooth(se=FALSE) + 
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+  geom_smooth(se = FALSE) + 
   labs(x = "Mean Probability for Percentile", 
        y = "Probability of Student Graduating", 
        title = "Relationship between Increased Predicted Probability and Graduation Rates", 
